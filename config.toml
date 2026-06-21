@@ -1,0 +1,11 @@
+SERVER_PORT = 3000
+CONTENT_DIR = "./content"
+UPLOAD_DIR = "./uploads"
+JWT_SECRET = "change-me-in-production-please"
+JWT_TTL = "24h"
+MAX_UPLOAD_SIZE = 5242880
+CACHE_SIZE = 67108864
+
+[admin]
+USERNAME = "admin"
+PASSWORD = "$2a$10$mus/G7fnJk.fWbmygooKEu4lqWdS.wzMDuzz9LXfNMXRQeeNnhQZG"

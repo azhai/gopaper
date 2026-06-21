@@ -1,0 +1,22 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  bin = "./tmp/gopaper"
+  cmd = "go build -o ./tmp/gopaper ."
+  delay = 1000
+  exclude_dir = ["tmp", "logs", "uploads", "web/admin/node_modules", "bin"]
+  exclude_regex = ["_test\\.go$", ".*_test\\.go$"]
+  include_ext = ["go", "toml", "html", "css"]
+  kill_delay = "0s"
+  send_interrupt = false
+  stop_on_error = true
+
+[log]
+  time = false
+
+[misc]
+  clean_on_exit = true
+
+[screen]
+  clear_on_rebuild = true

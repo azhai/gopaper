@@ -1,0 +1,149 @@
+{{define "index"}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>{{.Title}} - {{.SiteTitle}}</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/github-light.css">
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="{mobileMenu: false}">
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/" class="logo">{{.SiteTitle}}</a>
+    <button class="mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="菜单">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="main-nav" :class="{'open': mobileMenu}">
+      {{range .NavItems}}
+      <a href="{{.Href}}" {{if .Active}}class="active"{{end}}>{{.Label}}</a>
+      {{end}}
+    </nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" {{if .HeroImage}}style="background-image:url('{{.HeroImage}}')"{{end}}>
+  <div class="container hero-inner">
+    <h1>{{if .HeroTitle}}{{.HeroTitle}}{{else}}{{.SiteTitle}}{{end}}</h1>
+    <p class="hero-subtitle">{{if .HeroSubtitle}}{{.HeroSubtitle}}{{else}}{{.SiteDesc}}{{end}}</p>
+    {{if .HeroCTAText}}
+    <a href="{{.HeroCTALink}}" class="btn btn-primary">{{.HeroCTAText}}</a>
+    {{end}}
+  </div>
+</section>
+
+{{if .FeatureCards}}
+<section class="features">
+  <div class="container">
+    <h2 class="section-title">{{if .FeatureTitle}}{{.FeatureTitle}}{{else}}产品与服务{{end}}</h2>
+    <div class="features-grid">
+      {{range .FeatureCards}}
+      <div class="feature-card">
+        {{if .Icon}}<div class="feature-icon">{{.Icon}}</div>{{end}}
+        <h3>{{.Title}}</h3>
+        <p>{{.Desc}}</p>
+        {{if .Link}}<a href="{{.Link}}" class="card-link">了解更多 &rarr;</a>{{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+{{if .Articles}}
+<section class="news-section">
+  <div class="container">
+    <h2 class="section-title">{{if .NewsTitle}}{{.NewsTitle}}{{else}}新闻动态{{end}}</h2>
+    <table class="news-table">
+      <thead>
+        <tr>
+          <th>标题</th>
+          <th>作者</th>
+          <th>日期</th>
+          <th>标签</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Articles}}
+        <tr>
+          <td><a href="{{.Href}}">{{.Title}}</a></td>
+          <td>{{if .Author}}{{.Author}}{{else}}-{{end}}</td>
+          <td>{{if .Date}}{{.Date}}{{else}}-{{end}}</td>
+          <td>{{range .Tags}}<span class="tag">{{.}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{if .NewsLink}}
+    <div class="section-more">
+      <a href="{{.NewsLink}}" class="btn btn-outline">查看全部 &rarr;</a>
+    </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{if .ContactEmail}}
+<section class="contact-section">
+  <div class="container">
+    <h2 class="section-title">联系我们</h2>
+    <div class="contact-grid">
+      {{if .ContactEmail}}
+      <div class="contact-item">
+        <strong>邮箱</strong>
+        <p><a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a></p>
+      </div>
+      {{end}}
+      {{if .ContactPhone}}
+      <div class="contact-item">
+        <strong>电话</strong>
+        <p>{{.ContactPhone}}</p>
+      </div>
+      {{end}}
+      {{if .ContactAddress}}
+      <div class="contact-item">
+        <strong>地址</strong>
+        <p>{{.ContactAddress}}</p>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-col">
+      <h3>{{.SiteTitle}}</h3>
+      <p>{{.SiteDesc}}</p>
+    </div>
+    <div class="footer-col">
+      <h3>快速链接</h3>
+      {{range $i, $nav := .NavItems}}{{if lt $i 3}}
+      <a href="{{$nav.Href}}">{{$nav.Label}}</a>
+      {{end}}{{end}}
+    </div>
+    <div class="footer-col">
+      <h3>更多</h3>
+      {{range $i, $nav := .NavItems}}{{if ge $i 3}}
+      <a href="{{$nav.Href}}">{{$nav.Label}}</a>
+      {{end}}{{end}}
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <div class="container footer-bottom-inner">
+      <p>&copy; {{.Year}} {{.SiteTitle}}. {{if .FooterText}}{{.FooterText}}{{end}}</p>
+      {{if .ICP}}<p class="icp">{{.ICP}}</p>{{end}}
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
+{{end}}
