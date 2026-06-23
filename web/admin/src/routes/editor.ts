@@ -1,5 +1,5 @@
 import m from 'mithril';
-import { apiService, DirInfo } from '../services/apiService';
+import { apiService, DirInfo, type Region } from '../services/apiService';
 import { showAlert } from '../components/overlay';
 import { toastService } from '../components/toast';
 import { Icon } from '../icons';
@@ -22,6 +22,7 @@ interface EditorState {
     date: string;
     tags: string;
     weight: number;
+    position: string;
     comments: boolean;
     content: string;
   };
@@ -30,6 +31,7 @@ interface EditorState {
   saving: boolean;
   loading: boolean;
   dirs: DirInfo[];
+  regions: Region[];
 }
 
 export const EditorPage: m.Component<EditorAttrs, EditorState> = {
@@ -43,13 +45,14 @@ export const EditorPage: m.Component<EditorAttrs, EditorState> = {
       form: {
         dirPath: '', title: '', slug: '', author: '',
         date: new Date().toISOString().split('T')[0],
-        tags: '', weight: 0, comments: true, content: '',
+        tags: '', weight: 0, position: '', comments: true, content: '',
       },
       previewHtml: '',
       showPreview: false,
       saving: false,
       loading: isEdit,
       dirs: [],
+      regions: [],
     });
     const noun = isPage ? '页面' : '文章';
     topbarState.title = isEdit ? `编辑${noun}` : `新建${noun}`;
@@ -65,6 +68,25 @@ export const EditorPage: m.Component<EditorAttrs, EditorState> = {
       m.redraw();
     }).catch(() => {});
 
+    // Load layout regions for position selector
+    apiService.getLayouts().then(res => {
+      if (res.code === 0 && res.data) {
+        const templates = (res.data as any).templates || [];
+        // Collect all unique regions across templates
+        const seen = new Set<string>();
+        s.regions = [];
+        for (const t of templates) {
+          for (const r of (t.regions || [])) {
+            if (!seen.has(r.name)) {
+              seen.add(r.name);
+              s.regions.push(r);
+            }
+          }
+        }
+        m.redraw();
+      }
+    }).catch(() => {});
+
     if (s.isEdit && s.slug) {
       try {
         const result = await apiService.getArticle(s.slug);
@@ -78,6 +100,7 @@ export const EditorPage: m.Component<EditorAttrs, EditorState> = {
             date: d.date || '',
             tags: (d.tags || []).join(', '),
             weight: d.weight || 0,
+            position: d.position || '',
             comments: d.comments !== false,
             content: d.content || '',
           };
@@ -129,6 +152,21 @@ export const EditorPage: m.Component<EditorAttrs, EditorState> = {
                   })),
                 ])
               : null,
+            // Position selector (layout region)
+            m('.form-row.cols-2', [
+              field('布局位置', m('select.form-control', {
+                value: s.form.position,
+                onchange: (e: Event) => { s.form.position = (e.target as HTMLSelectElement).value; },
+              }, [
+                m('option', { value: '' }, '默认 (main)'),
+                ...s.regions.map(r => m('option', { value: r.name }, `${r.title} (${r.name})`)),
+              ])),
+              field('排序 (权重)', m('input.form-control', {
+                type: 'number', value: String(s.form.weight),
+                oninput: (e: Event) => { s.form.weight = parseInt((e.target as HTMLInputElement).value) || 0; },
+                disabled: s.isPage,
+              })),
+            ]),
             !s.isPage
               ? m('.form-row.cols-3', [
                   field('Slug', m('input.form-control', {
@@ -214,6 +252,7 @@ export const EditorPage: m.Component<EditorAttrs, EditorState> = {
                     date: s.isPage ? undefined : (s.form.date || undefined),
                     tags: s.isPage ? undefined : (s.form.tags ? s.form.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined),
                     weight: s.form.weight || undefined,
+                    position: s.form.position || undefined,
                     comments: s.isPage ? undefined : s.form.comments,
                     content: s.form.content,
                   };

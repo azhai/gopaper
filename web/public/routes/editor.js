@@ -15,13 +15,14 @@ export const EditorPage = {
             form: {
                 dirPath: '', title: '', slug: '', author: '',
                 date: new Date().toISOString().split('T')[0],
-                tags: '', weight: 0, comments: true, content: '',
+                tags: '', weight: 0, position: '', comments: true, content: '',
             },
             previewHtml: '',
             showPreview: false,
             saving: false,
             loading: isEdit,
             dirs: [],
+            regions: [],
         });
         const noun = isPage ? '页面' : '文章';
         topbarState.title = isEdit ? `编辑${noun}` : `新建${noun}`;
@@ -34,6 +35,24 @@ export const EditorPage = {
             const all = (res.data || []);
             s.dirs = s.isPage ? all.filter(d => d.dirType === 'page') : all.filter(d => d.dirType !== 'page');
             m.redraw();
+        }).catch(() => { });
+        // Load layout regions for position selector
+        apiService.getLayouts().then(res => {
+            if (res.code === 0 && res.data) {
+                const templates = res.data.templates || [];
+                // Collect all unique regions across templates
+                const seen = new Set();
+                s.regions = [];
+                for (const t of templates) {
+                    for (const r of (t.regions || [])) {
+                        if (!seen.has(r.name)) {
+                            seen.add(r.name);
+                            s.regions.push(r);
+                        }
+                    }
+                }
+                m.redraw();
+            }
         }).catch(() => { });
         if (s.isEdit && s.slug) {
             try {
@@ -48,6 +67,7 @@ export const EditorPage = {
                         date: d.date || '',
                         tags: (d.tags || []).join(', '),
                         weight: d.weight || 0,
+                        position: d.position || '',
                         comments: d.comments !== false,
                         content: d.content || '',
                     };
@@ -99,6 +119,21 @@ export const EditorPage = {
                                 })),
                             ])
                             : null,
+                        // Position selector (layout region)
+                        m('.form-row.cols-2', [
+                            field('布局位置', m('select.form-control', {
+                                value: s.form.position,
+                                onchange: (e) => { s.form.position = e.target.value; },
+                            }, [
+                                m('option', { value: '' }, '默认 (main)'),
+                                ...s.regions.map(r => m('option', { value: r.name }, `${r.title} (${r.name})`)),
+                            ])),
+                            field('排序 (权重)', m('input.form-control', {
+                                type: 'number', value: String(s.form.weight),
+                                oninput: (e) => { s.form.weight = parseInt(e.target.value) || 0; },
+                                disabled: s.isPage,
+                            })),
+                        ]),
                         !s.isPage
                             ? m('.form-row.cols-3', [
                                 field('Slug', m('input.form-control', {
@@ -182,6 +217,7 @@ export const EditorPage = {
                                         date: s.isPage ? undefined : (s.form.date || undefined),
                                         tags: s.isPage ? undefined : (s.form.tags ? s.form.tags.split(',').map(t => t.trim()).filter(Boolean) : undefined),
                                         weight: s.form.weight || undefined,
+                                        position: s.form.position || undefined,
                                         comments: s.isPage ? undefined : s.form.comments,
                                         content: s.form.content,
                                     };

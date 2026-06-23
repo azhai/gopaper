@@ -8,6 +8,7 @@ import { PagesPage } from './routes/pages';
 import { EditorPage } from './routes/editor';
 import { ImagesPage } from './routes/images';
 import { SettingsPage } from './routes/settings';
+import { LayoutPage } from './routes/layout';
 import { Sidebar, topbarState } from './components/navbar';
 import { Overlay } from './components/overlay';
 import { Toast } from './components/toast';
@@ -21,6 +22,7 @@ const titles: Record<string, string> = {
   '/pages/new': '新建页面',
   '/images': '图片管理',
   '/settings': '站点设置',
+  '/layout': '布局管理',
 };
 
 const Layout: m.Component = {
@@ -92,4 +94,5 @@ m.route(document.body!, '/dashboard', {
   '/pages/:slug/edit': guardEditor('page'),
   '/images': guard(ImagesPage),
   '/settings': guard(SettingsPage),
+  '/layout': guard(LayoutPage),
 });

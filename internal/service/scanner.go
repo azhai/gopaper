@@ -148,6 +148,7 @@ func (s *Scanner) parseFile(filePath, dirPath string) (*model.Article, error) {
 		Tags:     metaData.Tags,
 		Comments: comments,
 		Weight:   metaData.Weight,
+		Position: metaData.Position,
 		Content:  string(content),
 		DirPath:  dirPath,
 		FilePath: filePath,

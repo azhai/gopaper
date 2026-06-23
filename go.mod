@@ -34,4 +34,4 @@ require (
 	golang.org/x/text v0.38.0 // indirect
 )
 
-replace github.com/azhai/gobus => ../gobus
+// replace github.com/azhai/gobus => ../gobus

@@ -4,6 +4,8 @@ type DirInfo struct {
 	DirPath      string `json:"dirPath"`
 	Title        string `json:"title"`
 	DirType      string `json:"dirType"` // page, news, docs
+	Layout       string `json:"layout"`
+	SortOrder    string `json:"sortOrder"`
 	NavOrder     int    `json:"navOrder"`
 	ArticleCount int    `json:"articleCount"`
 }

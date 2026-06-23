@@ -17,11 +17,11 @@ all: clean one build
 build: front
 	@echo "Cross-compiling ..."
 	mkdir -p $(BIN_DIR)
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64  $(GOBUILD) -o $(BIN_DIR)/$(APP).darwin-arm64  ./
-	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP).darwin-amd64  ./
-	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64  $(GOBUILD) -o $(BIN_DIR)/$(APP).linux-arm64   ./
-	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP).linux-amd64   ./
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP).windows-amd64.exe ./
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=arm64  $(GOBUILD) -o $(BIN_DIR)/$(APP)-$(VERSION).darwin-arm64  ./
+	CGO_ENABLED=0 GOOS=darwin  GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP)-$(VERSION).darwin-amd64  ./
+	CGO_ENABLED=0 GOOS=linux   GOARCH=arm64  $(GOBUILD) -o $(BIN_DIR)/$(APP)-$(VERSION).linux-arm64   ./
+	CGO_ENABLED=0 GOOS=linux   GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP)-$(VERSION).linux-amd64   ./
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64  $(GOBUILD) -o $(BIN_DIR)/$(APP)-$(VERSION).windows-amd64.exe ./
 	@echo "✅ Build success."
 
 front:

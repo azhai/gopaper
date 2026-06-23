@@ -1,0 +1,41 @@
+[[templates]]
+name = "home"
+title = "首页模板"
+file = "index.html"
+desc = "Hero + 功能 + 新闻 + 联系方式"
+
+  [[templates.regions]]
+  name = "hero"
+  title = "横幅区"
+
+  [[templates.regions]]
+  name = "features"
+  title = "功能区"
+
+  [[templates.regions]]
+  name = "news"
+  title = "新闻区"
+
+  [[templates.regions]]
+  name = "contact"
+  title = "联系区"
+
+[[templates]]
+name = "list"
+title = "列表模板"
+file = "list.html"
+desc = "文章/新闻列表页"
+
+  [[templates.regions]]
+  name = "main"
+  title = "主内容区"
+
+[[templates]]
+name = "article"
+title = "文章模板"
+file = "article.html"
+desc = "单篇文章详情页"
+
+  [[templates.regions]]
+  name = "main"
+  title = "主内容区"

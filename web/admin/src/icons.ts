@@ -7,7 +7,7 @@ type IconName =
   | 'info' | 'warning' | 'error' | 'success' | 'chevron-right' | 'chevron-left'
   | 'menu' | 'copy' | 'image-plus' | 'layers' | 'activity' | 'zap' | 'eye'
   | 'x' | 'globe' | 'mail' | 'phone' | 'map-pin' | 'star' | 'list' | 'external'
-  | 'gopaper';
+  | 'gopaper' | 'chevron-down' | 'layout';
 
 const paths: Record<IconName, string> = {
   dashboard: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
@@ -51,7 +51,9 @@ const paths: Record<IconName, string> = {
   star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
   external: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3',
-  gopaper: 'M3 5 C3 5 7 3.5 12 5 C17 6.5 21 5 21 5 L21 20 C21 20 17 21.5 12 20 C7 18.5 3 20 3 20 Z M12 5 L12 20 M14.5 9 L19.5 9 M14.5 13 L17.5 13',
+  gopaper: 'M12 2L3 7v10l9 5 9-5V7l-9-5zM12 2v20M3 7l9 5 9-5M7 4.5l5 2.8 5-2.8M17 19.5l-5-2.8-5 2.8',
+  'chevron-down': 'M6 9l6 6 6-6',
+  layout: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
 };
 
 export function Icon(name: IconName, attrs: Record<string, unknown> = {}): m.Vnode {

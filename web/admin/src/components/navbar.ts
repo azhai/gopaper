@@ -14,6 +14,7 @@ const navItems: NavEntry[] = [
   { href: '/articles', label: '文章管理', icon: 'article' },
   { href: '/pages', label: '页面管理', icon: 'file' },
   { href: '/images', label: '图片管理', icon: 'image' },
+  { href: '/layout', label: '布局管理', icon: 'layout' },
   { href: '/settings', label: '站点设置', icon: 'settings' },
 ];
 
@@ -21,7 +22,7 @@ let sidebarOpen = false;
 
 function isActive(href: string): boolean {
   const current = m.route.get();
-  if (href === '/articles' || href === '/pages') {
+  if (href === '/articles' || href === '/pages' || href === '/layout') {
     return current.startsWith(href);
   }
   return current === href;
@@ -33,7 +34,7 @@ export const Sidebar: m.Component = {
     return [
       m('aside.sidebar', { class: sidebarOpen ? 'open' : '' }, [
         m('.sidebar-brand', [
-          m('.sidebar-brand-icon', Icon('gopaper')),
+          m('.sidebar-brand-icon', m('img', { src: '/static/logo-mist.svg', alt: 'GoPaper', style: { width: '100%', height: '100%' } })),
           m('div', [
             m('.sidebar-brand-name', 'GoPaper'),
             m('.sidebar-brand-sub', '内容管理后台'),

@@ -88,6 +88,7 @@ func (af *ArticleForge) Update(ctx context.Context, slug string, input model.Art
 	if input.Weight != 0 {
 		article.Weight = input.Weight
 	}
+	article.Position = input.Position
 	if input.Content != "" {
 		article.Content = input.Content
 	}
@@ -101,6 +102,7 @@ func (af *ArticleForge) Update(ctx context.Context, slug string, input model.Art
 		Tags:     article.Tags,
 		Comments: &article.Comments,
 		Weight:   article.Weight,
+		Position: article.Position,
 		Content:  article.Content,
 	}, article.Slug)
 
@@ -222,33 +224,36 @@ func (af *ArticleForge) writeAtomic(filePath string, content []byte) error {
 
 func (af *ArticleForge) buildFileContent(input model.ArticleInput, slug string) string {
 	var sb strings.Builder
-	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("title: %q\n", input.Title))
-	sb.WriteString(fmt.Sprintf("slug: %q\n", slug))
+	sb.WriteString("+++\n")
+	sb.WriteString(fmt.Sprintf("title = %q\n", input.Title))
+	sb.WriteString(fmt.Sprintf("slug = %q\n", slug))
 	if input.Author != "" {
-		sb.WriteString(fmt.Sprintf("author: %q\n", input.Author))
+		sb.WriteString(fmt.Sprintf("author = %q\n", input.Author))
 	}
 	if input.Date != "" {
-		sb.WriteString(fmt.Sprintf("date: %s\n", input.Date))
+		sb.WriteString(fmt.Sprintf("date = %q\n", input.Date))
 	} else {
-		sb.WriteString(fmt.Sprintf("date: %s\n", time.Now().Format("2006-01-02")))
+		sb.WriteString(fmt.Sprintf("date = %q\n", time.Now().Format("2006-01-02")))
 	}
 	if len(input.Tags) > 0 {
 		tags := make([]string, len(input.Tags))
 		for i, t := range input.Tags {
 			tags[i] = fmt.Sprintf("%q", t)
 		}
-		sb.WriteString(fmt.Sprintf("tags: [%s]\n", strings.Join(tags, ", ")))
+		sb.WriteString(fmt.Sprintf("tags = [%s]\n", strings.Join(tags, ", ")))
 	}
 	comments := true
 	if input.Comments != nil {
 		comments = *input.Comments
 	}
-	sb.WriteString(fmt.Sprintf("comments: %v\n", comments))
+	sb.WriteString(fmt.Sprintf("comments = %v\n", comments))
 	if input.Weight != 0 {
-		sb.WriteString(fmt.Sprintf("weight: %d\n", input.Weight))
+		sb.WriteString(fmt.Sprintf("weight = %d\n", input.Weight))
 	}
-	sb.WriteString("---\n\n")
+	if input.Position != "" {
+		sb.WriteString(fmt.Sprintf("position = %q\n", input.Position))
+	}
+	sb.WriteString("+++\n\n")
 	sb.WriteString(input.Content)
 	return sb.String()
 }

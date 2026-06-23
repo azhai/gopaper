@@ -10,6 +10,7 @@ type Article struct {
 	Tags     []string `json:"tags,omitempty"`
 	Comments bool     `json:"comments"`
 	Weight   int      `json:"weight,omitempty"`
+	Position string   `json:"position,omitempty"` // template region: hero, features, news, etc.
 	Content  string   `json:"content"`
 	DirPath  string   `json:"dirPath"`
 	FilePath string   `json:"-"`
@@ -24,28 +25,31 @@ type ArticleInput struct {
 	Tags     []string `json:"tags,omitempty"`
 	Comments *bool    `json:"comments,omitempty"`
 	Weight   int      `json:"weight,omitempty"`
+	Position string   `json:"position,omitempty"`
 	Content  string   `json:"content"`
 }
 
 type ArticleSummary struct {
-	Slug    string   `json:"slug"`
-	Title   string   `json:"title"`
-	Author  string   `json:"author,omitempty"`
-	Date    string   `json:"date,omitempty"`
-	Tags    []string `json:"tags,omitempty"`
-	Weight  int      `json:"weight,omitempty"`
-	DirPath string   `json:"dirPath"`
+	Slug     string   `json:"slug"`
+	Title    string   `json:"title"`
+	Author   string   `json:"author,omitempty"`
+	Date     string   `json:"date,omitempty"`
+	Tags     []string `json:"tags,omitempty"`
+	Weight   int      `json:"weight,omitempty"`
+	Position string   `json:"position,omitempty"`
+	DirPath  string   `json:"dirPath"`
 }
 
 func ToSummary(a *Article) *ArticleSummary {
 	return &ArticleSummary{
-		Slug:    a.Slug,
-		Title:   a.Title,
-		Author:  a.Author,
-		Date:    a.Date,
-		Tags:    a.Tags,
-		Weight:  a.Weight,
-		DirPath: a.DirPath,
+		Slug:     a.Slug,
+		Title:    a.Title,
+		Author:   a.Author,
+		Date:     a.Date,
+		Tags:     a.Tags,
+		Weight:   a.Weight,
+		Position: a.Position,
+		DirPath:  a.DirPath,
 	}
 }
 
@@ -57,6 +61,7 @@ type MetaData struct {
 	Tags     []string `toml:"tags"`
 	Comments *bool    `toml:"comments"`
 	Weight   int      `toml:"weight"`
+	Position string   `toml:"position"`
 }
 
 type ImageInfo struct {

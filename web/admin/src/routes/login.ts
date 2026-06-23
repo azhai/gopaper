@@ -7,10 +7,12 @@ export const LoginPage: m.Component = {
   view() {
     return m('.login-page', m('.login-card', [
       m('.login-logo', [
-        m('.login-logo-icon', Icon('gopaper')),
+        m('.login-logo-icon', m('img', { src: '/static/logo-mist.svg', alt: 'GoPaper' })),
+        m('div.login-logo-text', [
+          m('.login-title', 'GoPaper'),
+          m('.login-subtitle', '内容管理后台 · 请登录以继续'),
+        ]),
       ]),
-      m('.login-title', 'GoPaper'),
-      m('.login-subtitle', '内容管理后台 · 请登录以继续'),
       m('form', {
         onsubmit: async (e: Event) => {
           e.preventDefault();

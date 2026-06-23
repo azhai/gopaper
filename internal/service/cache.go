@@ -132,6 +132,8 @@ func collectDirs(tree *model.SiteTree, dirs *[]model.DirInfo) {
 			DirPath:      tree.DirPath,
 			Title:        tree.Meta.SITE_TITLE,
 			DirType:      tree.Meta.DIR_TYPE,
+			Layout:       tree.Meta.LAYOUT,
+			SortOrder:    tree.Meta.SORT_ORDER,
 			NavOrder:     tree.Meta.NAV_ORDER,
 			ArticleCount: len(tree.Articles),
 		})

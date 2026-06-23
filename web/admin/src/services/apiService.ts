@@ -88,12 +88,40 @@ export const apiService = {
 
   updateSettings: (data: unknown) =>
     request('PUT', '/settings', data),
+
+  getLayouts: () =>
+    request<LayoutConfig>('GET', '/layouts'),
+
+  saveLayouts: (data: unknown) =>
+    request('PUT', '/layouts', data),
+
+  getRegions: (name: string) =>
+    request<Region[]>('GET', `/layouts/${name}/regions`),
 };
+
+export interface Region {
+  name: string;
+  title: string;
+}
+
+export interface TemplateInfo {
+  name: string;
+  title: string;
+  file: string;
+  desc: string;
+  regions: Region[];
+}
+
+export interface LayoutConfig {
+  templates: TemplateInfo[];
+}
 
 export interface DirInfo {
   dirPath: string;
   title: string;
   dirType: string;
+  layout: string;
+  sortOrder: string;
   navOrder: number;
   articleCount: number;
 }

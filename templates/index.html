@@ -14,7 +14,7 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="/" class="logo">{{.SiteTitle}}</a>
+    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="{{.SiteTitle}}" class="logo-img"></a>
     <button class="mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="菜单">
       <span></span><span></span><span></span>
     </button>
@@ -86,6 +86,28 @@
     {{end}}
   </div>
 </section>
+{{end}}
+
+{{if .Regions}}
+{{range $name, $articles := .Regions}}
+{{if and (ne $name "main") (ne $name "hero") (ne $name "features") (ne $name "news") (ne $name "contact")}}
+{{if $articles}}
+<section class="region-section region-{{$name}}">
+  <div class="container">
+    <div class="region-grid">
+      {{range $articles}}
+      <div class="region-card">
+        <h3><a href="{{.Href}}">{{.Title}}</a></h3>
+        {{if .Author}}<p class="region-author">{{.Author}}</p>{{end}}
+        {{if .Date}}<p class="region-date">{{.Date}}</p>{{end}}
+      </div>
+      {{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+{{end}}
+{{end}}
 {{end}}
 
 {{if .ContactEmail}}

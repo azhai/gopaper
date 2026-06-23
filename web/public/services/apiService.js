@@ -48,6 +48,9 @@ export const apiService = {
     getDirs: () => request('GET', '/dirs'),
     getSettings: () => request('GET', '/settings'),
     updateSettings: (data) => request('PUT', '/settings', data),
+    getLayouts: () => request('GET', '/layouts'),
+    saveLayouts: (data) => request('PUT', '/layouts', data),
+    getRegions: (name) => request('GET', `/layouts/${name}/regions`),
 };
 export const authService = {
     getToken: () => localStorage.getItem('admin_token'),

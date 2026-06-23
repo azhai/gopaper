@@ -1,4 +1,4 @@
-SERVER_PORT = 3000
+SERVER_PORT = "3000"
 CONTENT_DIR = "./content"
 UPLOAD_DIR = "./uploads"
 JWT_SECRET = "change-me-in-production-please"

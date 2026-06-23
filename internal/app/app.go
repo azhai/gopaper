@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/azhai/gopaper/internal/config"
 	"github.com/azhai/gopaper/internal/handler"
+	"github.com/azhai/gopaper/web"
 
 	"github.com/azhai/gobus/log"
 	"github.com/gofiber/fiber/v3"
@@ -64,11 +66,23 @@ func New(cfg *config.AppConfig) (*App, error) {
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 	}))
 
+	publicFS, _ := fs.Sub(web.PublicFS, "public")
+	adminFS, _ := fs.Sub(publicFS, "admin")
+
 	fiberApp.Use("/uploads", static.New(cfg.UPLOAD_DIR))
-	fiberApp.Use("/static", static.New("./web/public"))
-	fiberApp.Use("/admin", static.New("./web/public/admin"))
+	fiberApp.Use("/static", static.New("", static.Config{FS: publicFS}))
+
+	// Admin: serve static assets directly; SPA fallback for other routes
+	fiberApp.Use("/admin", static.New("", static.Config{FS: adminFS}))
 	fiberApp.Get("/admin/*", func(c fiber.Ctx) error {
-		return c.SendFile("./web/public/admin/index.html")
+		path := c.Params("*")
+		// Try serving as a static file first
+		if f, err := adminFS.Open(path); err == nil {
+			f.Close()
+			return c.SendFile(path, fiber.SendFile{FS: adminFS})
+		}
+		// SPA fallback: serve index.html
+		return c.SendFile("index.html", fiber.SendFile{FS: adminFS})
 	})
 
 	fiberApp.Get("/", pageHandler.Index)

@@ -1,4 +1,4 @@
-{{define "article"}}
+{{define "list"}}
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -14,7 +14,7 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="/" class="logo">{{.SiteTitle}}</a>
+    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="{{.SiteTitle}}" class="logo-img"></a>
     <button class="mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="菜单">
       <span></span><span></span><span></span>
     </button>
@@ -29,22 +29,63 @@
 <main>
 <section class="page-banner">
   <div class="container">
-    <h1>{{.Article.Title}}</h1>
-    {{if ne .DirType "page"}}
-    <div class="article-meta">
-      {{if .Article.Author}}{{.Article.Author}} · {{end}}
-      {{if .Article.Date}}{{.Article.Date}}{{end}}
-      {{if .Article.Tags}}&nbsp;&nbsp;{{range .Article.Tags}}<span class="tag">{{.}}</span>{{end}}{{end}}
-    </div>
-    {{end}}
+    <h1>{{.PageTitle}}</h1>
+    {{if .PageDesc}}<p>{{.PageDesc}}</p>{{end}}
   </div>
 </section>
 
-<section class="article-section">
+<section class="list-section">
   <div class="container">
-    <article class="article-content">
-      {{.Content | safeHTML}}
-    </article>
+    {{if .Articles}}
+    {{if eq .DirType "page"}}
+    <div class="list-cards">
+      {{range .Articles}}
+      <article class="list-card-item">
+        <h3><a href="{{.Href}}">{{.Title}}</a></h3>
+      </article>
+      {{end}}
+    </div>
+    {{else if eq .DirType "news"}}
+    <table class="news-table">
+      <thead>
+        <tr>
+          <th>标题</th>
+          <th>作者</th>
+          <th>日期</th>
+          <th>标签</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Articles}}
+        <tr>
+          <td><a href="{{.Href}}">{{.Title}}</a></td>
+          <td>{{if .Author}}{{.Author}}{{else}}-{{end}}</td>
+          <td>{{if .Date}}{{.Date}}{{else}}-{{end}}</td>
+          <td>{{range .Tags}}<span class="tag">{{.}}</span>{{end}}</td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+    {{else}}
+    <div class="list-grid">
+      {{range .Articles}}
+      <article class="list-card">
+        <div class="list-body">
+          <h3><a href="{{.Href}}">{{.Title}}</a></h3>
+          <div class="list-meta">{{.Date}}{{if .Author}} · {{.Author}}{{end}}</div>
+          <div class="list-tags">
+            {{range .Tags}}<span class="tag">{{.}}</span>{{end}}
+          </div>
+        </div>
+      </article>
+      {{end}}
+    </div>
+    {{end}}
+    {{else}}
+    <div class="empty-state">
+      <p>暂无内容</p>
+    </div>
+    {{end}}
   </div>
 </section>
 </main>

@@ -13,7 +13,9 @@ type DirMeta struct {
 	SITE_THEME        string        `toml:"SITE_THEME" json:"SITE_THEME"`
 	NAV_ORDER         int           `toml:"NAV_ORDER" json:"NAV_ORDER"`
 	NAV_HIDE          bool          `toml:"NAV_HIDE" json:"NAV_HIDE"`
-	DIR_TYPE          string        `toml:"DIR_TYPE" json:"DIR_TYPE"` // page, news, docs
+	DIR_TYPE          string        `toml:"DIR_TYPE" json:"DIR_TYPE"`     // page, news, docs
+	LAYOUT            string        `toml:"LAYOUT" json:"LAYOUT"`         // template name: home, list, article
+	SORT_ORDER        string        `toml:"SORT_ORDER" json:"SORT_ORDER"` // asc, desc
 	ARTICLES_PER_PAGE int           `toml:"ARTICLES_PER_PAGE" json:"ARTICLES_PER_PAGE"`
 	HERO_TITLE        string        `toml:"HERO_TITLE" json:"HERO_TITLE"`
 	HERO_SUBTITLE     string        `toml:"HERO_SUBTITLE" json:"HERO_SUBTITLE"`
@@ -56,6 +58,12 @@ func MergeDirMeta(parent, child DirMeta) DirMeta {
 	}
 	if child.DIR_TYPE != "" {
 		result.DIR_TYPE = child.DIR_TYPE
+	}
+	if child.LAYOUT != "" {
+		result.LAYOUT = child.LAYOUT
+	}
+	if child.SORT_ORDER != "" {
+		result.SORT_ORDER = child.SORT_ORDER
 	}
 	if child.ARTICLES_PER_PAGE != 0 {
 		result.ARTICLES_PER_PAGE = child.ARTICLES_PER_PAGE

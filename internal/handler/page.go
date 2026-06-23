@@ -20,7 +20,7 @@ type PageHandler struct {
 func NewPageHandler(cache *service.CacheVault, renderer *service.Renderer) *PageHandler {
 	tmpl := template.Must(template.New("").Funcs(template.FuncMap{
 		"safeHTML": func(s string) template.HTML { return template.HTML(s) },
-	}).ParseGlob("web/templates/*.html"))
+	}).ParseGlob("templates/*.html"))
 
 	return &PageHandler{cache: cache, renderer: renderer, templates: tmpl}
 }
