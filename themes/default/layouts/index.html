@@ -5,6 +5,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>{{.Title}} - {{.SiteTitle}}</title>
+<meta name="description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
+<meta property="og:site_name" content="{{.SiteTitle}}">
+<meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="/static/github-light.css">
@@ -86,28 +91,6 @@
     {{end}}
   </div>
 </section>
-{{end}}
-
-{{if .Regions}}
-{{range $name, $articles := .Regions}}
-{{if and (ne $name "main") (ne $name "hero") (ne $name "features") (ne $name "news") (ne $name "contact")}}
-{{if $articles}}
-<section class="region-section region-{{$name}}">
-  <div class="container">
-    <div class="region-grid">
-      {{range $articles}}
-      <div class="region-card">
-        <h3><a href="{{.Href}}">{{.Title}}</a></h3>
-        {{if .Author}}<p class="region-author">{{.Author}}</p>{{end}}
-        {{if .Date}}<p class="region-date">{{.Date}}</p>{{end}}
-      </div>
-      {{end}}
-    </div>
-  </div>
-</section>
-{{end}}
-{{end}}
-{{end}}
 {{end}}
 
 {{if .ContactEmail}}

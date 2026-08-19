@@ -45,7 +45,7 @@ func (s *Scanner) ScanAll(ctx context.Context) (*model.SiteTree, []model.Article
 		return nil, nil, nil, fmt.Errorf("scan dir: %w", err)
 	}
 
-	sortArticles(articles)
+	sortArticles(articles, "")
 
 	return siteTree, articles, dirMetas, nil
 }
@@ -115,10 +115,13 @@ func (s *Scanner) scanDir(ctx context.Context, absDir, relDir string, parentMeta
 			continue
 		}
 		*articles = append(*articles, *article)
-		tree.Articles = append(tree.Articles, article)
+		if !article.Draft {
+			tree.Articles = append(tree.Articles, article)
+		}
 	}
 
 	sortSiteTreeChildren(tree.Children)
+	sortArticlePtrs(tree.Articles, mergedMeta.SORT_ORDER)
 	return nil
 }
 
@@ -140,6 +143,11 @@ func (s *Scanner) parseFile(filePath, dirPath string) (*model.Article, error) {
 		comments = *metaData.Comments
 	}
 
+	draft := false
+	if metaData.Draft != nil {
+		draft = *metaData.Draft
+	}
+
 	article := &model.Article{
 		Slug:     slug,
 		Title:    metaData.Title,
@@ -149,6 +157,8 @@ func (s *Scanner) parseFile(filePath, dirPath string) (*model.Article, error) {
 		Comments: comments,
 		Weight:   metaData.Weight,
 		Position: metaData.Position,
+		Draft:    draft,
+		Summary:  extractSummary(metaData.Summary, string(content)),
 		Content:  string(content),
 		DirPath:  dirPath,
 		FilePath: filePath,
@@ -206,16 +216,33 @@ func (s *Scanner) readDirMeta(dirPath string) model.DirMeta {
 	return meta
 }
 
-func sortArticles(articles []model.Article) {
+func sortArticles(articles []model.Article, sortOrder string) {
 	sort.SliceStable(articles, func(i, j int) bool {
-		if articles[i].Weight != articles[j].Weight {
-			return articles[i].Weight > articles[j].Weight
-		}
-		if articles[i].Date != articles[j].Date {
-			return articles[i].Date > articles[j].Date
-		}
-		return articles[i].Title < articles[j].Title
+		return compareArticles(&articles[i], &articles[j], sortOrder)
 	})
+}
+
+func sortArticlePtrs(articles []*model.Article, sortOrder string) {
+	sort.SliceStable(articles, func(i, j int) bool {
+		return compareArticles(articles[i], articles[j], sortOrder)
+	})
+}
+
+func compareArticles(a, b *model.Article, sortOrder string) bool {
+	asc := sortOrder != "desc"
+	if a.Weight != b.Weight {
+		if asc {
+			return a.Weight < b.Weight
+		}
+		return a.Weight > b.Weight
+	}
+	if a.Date != b.Date {
+		if asc {
+			return a.Date < b.Date
+		}
+		return a.Date > b.Date
+	}
+	return a.Title < b.Title
 }
 
 func sortSiteTreeChildren(children []*model.SiteTree) {
@@ -234,4 +261,27 @@ func sortSiteTreeChildren(children []*model.SiteTree) {
 		}
 		return children[i].Title < children[j].Title
 	})
+}
+
+func extractSummary(metaSummary, content string) string {
+	if metaSummary != "" {
+		return metaSummary
+	}
+	if idx := strings.Index(content, "<!--more-->"); idx >= 0 {
+		return cleanMarkdown(content[:idx], 200)
+	}
+	return ""
+}
+
+func cleanMarkdown(s string, n int) string {
+	s = strings.TrimSpace(s)
+	for _, ch := range []string{"#", "*", "`", ">"} {
+		s = strings.ReplaceAll(s, ch, "")
+	}
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.TrimSpace(s)
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
 }

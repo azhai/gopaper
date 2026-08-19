@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -17,21 +18,19 @@ import (
 	"github.com/azhai/gopaper/web"
 
 	"github.com/azhai/gobus/log"
-	"github.com/gofiber/fiber/v3"
-	"github.com/gofiber/fiber/v3/middleware/cors"
-	"github.com/gofiber/fiber/v3/middleware/recover"
-	"github.com/gofiber/fiber/v3/middleware/static"
+	"github.com/labstack/echo/v4"
+	echoMiddleware "github.com/labstack/echo/v4/middleware"
 )
 
 type App struct {
-	fiber   *fiber.App
+	echo    *echo.Echo
 	logger  *slog.Logger
 	cache   *service.CacheVault
 	scanner *service.Scanner
 	cfg     *config.AppConfig
 }
 
-func New(cfg *config.AppConfig) (*App, error) {
+func New(cfg *config.AppConfig, dev bool) (*App, error) {
 	logger := initLogger("logs/app.log")
 
 	cache := service.NewCacheVault(cfg.CACHE_SIZE, logger)
@@ -50,69 +49,82 @@ func New(cfg *config.AppConfig) (*App, error) {
 	articleHandler := handler.NewArticleHandler(articleForge, renderer)
 	imageHandler := handler.NewImageHandler(imageStore)
 	cacheHandler := handler.NewCacheHandler(cache, scanner, cfg.CONTENT_DIR)
-	pageHandler := handler.NewPageHandler(cache, renderer)
+	pageHandler := handler.NewPageHandler(cache, renderer, cfg.SITE_URL)
 
-	fiberApp := fiber.New(fiber.Config{
-		AppName:      "StaticCMS",
-		ServerHeader: "StaticCMS",
-		ErrorHandler: customErrorHandler,
-	})
+	var sse *handler.SSEServer
+	if dev {
+		sse = handler.NewSSEServer(logger)
+		pageHandler.SetDevMode(sse)
+	}
 
-	fiberApp.Use(slogMiddleware(logger))
-	fiberApp.Use(recover.New())
-	fiberApp.Use(cors.New(cors.Config{
-		AllowOrigins: []string{"*"},
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	e := echo.New()
+	e.HideBanner = true
+	e.HTTPErrorHandler = customErrorHandler
+
+	e.Use(slogMiddleware(logger))
+	e.Use(echoMiddleware.Recover())
+	allowedOrigins := cfg.ALLOWED_ORIGINS
+	if len(allowedOrigins) == 0 {
+		allowedOrigins = []string{"*"}
+	}
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins: allowedOrigins,
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowHeaders: []string{"Origin", "Content-Type", "Accept", "Authorization"},
 	}))
 
 	publicFS, _ := fs.Sub(web.PublicFS, "public")
 	adminFS, _ := fs.Sub(publicFS, "admin")
 
-	fiberApp.Use("/uploads", static.New(cfg.UPLOAD_DIR))
-	fiberApp.Use("/static", static.New("", static.Config{FS: publicFS}))
+	e.Group("/uploads", echoMiddleware.StaticWithConfig(echoMiddleware.StaticConfig{Root: cfg.UPLOAD_DIR}))
+	e.Group("/static", echoMiddleware.StaticWithConfig(echoMiddleware.StaticConfig{Root: "", Filesystem: http.FS(publicFS), IgnoreBase: true}))
+	e.Group("/admin", echoMiddleware.StaticWithConfig(echoMiddleware.StaticConfig{Root: "", Filesystem: http.FS(adminFS), IgnoreBase: true, HTML5: true}))
 
-	// Admin: serve static assets directly; SPA fallback for other routes
-	fiberApp.Use("/admin", static.New("", static.Config{FS: adminFS}))
-	fiberApp.Get("/admin/*", func(c fiber.Ctx) error {
-		path := c.Params("*")
-		// Try serving as a static file first
-		if f, err := adminFS.Open(path); err == nil {
-			f.Close()
-			return c.SendFile(path, fiber.SendFile{FS: adminFS})
-		}
-		// SPA fallback: serve index.html
-		return c.SendFile("index.html", fiber.SendFile{FS: adminFS})
-	})
+	e.GET("/", pageHandler.Index)
+	e.GET("/:dir", pageHandler.DirList)
+	e.GET("/:dir/page/:num", pageHandler.DirList)
+	e.GET("/:dir/:slug", pageHandler.ArticleDetail)
+	e.GET("/:d1/:d2/:d3", pageHandler.ResolvePath)
+	e.GET("/:d1/:d2/:d3/:d4", pageHandler.ResolvePath)
+	e.GET("/:d1/:d2/:d3/:d4/:d5", pageHandler.ResolvePath)
+	e.GET("/index.xml", pageHandler.RSS)
+	e.GET("/sitemap.xml", pageHandler.Sitemap)
+	e.GET("/robots.txt", pageHandler.Robots)
 
-	fiberApp.Get("/", pageHandler.Index)
-	fiberApp.Get("/:dir", pageHandler.DirList)
-	fiberApp.Get("/:dir/:slug", pageHandler.ArticleDetail)
+	if dev {
+		e.GET("/livereload", sse.Livereload)
+		handler.StartDevWatchers(pageHandler, cache, scanner, cfg.CONTENT_DIR, logger)
+		logger.Info("dev mode enabled: template/content watchers started")
+	}
 
-	api := fiberApp.Group("/api")
+	api := e.Group("/api")
 	admin := api.Group("/admin")
 
-	admin.Post("/login", authHandler.Login)
+	admin.POST("/login", authHandler.Login)
 
-	adminAuth := admin.Group("", authGuard.FiberMiddleware())
-	adminAuth.Get("/articles", articleHandler.List)
-	adminAuth.Get("/articles/:slug", articleHandler.Get)
-	adminAuth.Post("/articles", articleHandler.Create)
-	adminAuth.Put("/articles/:slug", articleHandler.Update)
-	adminAuth.Delete("/articles/:slug", articleHandler.Delete)
-	adminAuth.Post("/articles/preview", articleHandler.Preview)
+	adminAuth := admin.Group("", authGuard.EchoMiddleware())
+	adminAuth.GET("/articles", articleHandler.List)
+	adminAuth.GET("/articles/:slug", articleHandler.Get)
+	adminAuth.POST("/articles", articleHandler.Create)
+	adminAuth.PUT("/articles/:slug", articleHandler.Update)
+	adminAuth.DELETE("/articles/:slug", articleHandler.Delete)
+	adminAuth.POST("/articles/preview", articleHandler.Preview)
 
-	adminAuth.Get("/images", imageHandler.List)
-	adminAuth.Post("/images", imageHandler.Upload)
-	adminAuth.Delete("/images/:fileName", imageHandler.Delete)
+	adminAuth.GET("/images", imageHandler.List)
+	adminAuth.POST("/images", imageHandler.Upload)
+	adminAuth.DELETE("/images/:fileName", imageHandler.Delete)
 
-	adminAuth.Post("/cache/refresh", cacheHandler.Refresh)
-	adminAuth.Get("/dirs", cacheHandler.ListDirs)
-	adminAuth.Get("/settings", cacheHandler.GetSettings)
-	adminAuth.Put("/settings", cacheHandler.UpdateSettings)
+	adminAuth.POST("/cache/refresh", cacheHandler.Refresh)
+	adminAuth.GET("/dirs", cacheHandler.ListDirs)
+	adminAuth.GET("/settings", cacheHandler.GetSettings)
+	adminAuth.PUT("/settings", cacheHandler.UpdateSettings)
+
+	adminAuth.GET("/layouts", handler.NewLayoutHandler().GetLayouts)
+	adminAuth.PUT("/layouts", handler.NewLayoutHandler().SaveLayouts)
+	adminAuth.GET("/layouts/:name/regions", handler.NewLayoutHandler().GetRegions)
 
 	app := &App{
-		fiber:   fiberApp,
+		echo:    e,
 		logger:  logger,
 		cache:   cache,
 		scanner: scanner,
@@ -130,22 +142,35 @@ func New(cfg *config.AppConfig) (*App, error) {
 func (a *App) Start() error {
 	addr := fmt.Sprintf(":%s", a.cfg.SERVER_PORT)
 	a.logger.Info("server starting", "addr", addr)
-	return a.fiber.Listen(addr)
+	return a.echo.Start(addr)
 }
 
 func (a *App) Shutdown() error {
 	a.logger.Info("server shutting down")
-	return a.fiber.Shutdown()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return a.echo.Shutdown(ctx)
 }
 
-func customErrorHandler(c fiber.Ctx, err error) error {
-	code := fiber.StatusInternalServerError
-	if e, ok := err.(*fiber.Error); ok {
-		code = e.Code
+func customErrorHandler(err error, c echo.Context) {
+	code := http.StatusInternalServerError
+	msg := "内部服务器错误"
+	if he, ok := err.(*echo.HTTPError); ok {
+		code = he.Code
+		if he.Message != nil {
+			msg = fmt.Sprintf("%v", he.Message)
+		} else {
+			msg = http.StatusText(code)
+		}
+	} else if code < 500 {
+		msg = http.StatusText(code)
 	}
-	return c.Status(code).JSON(fiber.Map{
+	if code >= 500 && !c.Echo().Debug {
+		msg = "内部服务器错误"
+	}
+	c.JSON(code, map[string]any{
 		"code":    code*100 + 1,
-		"message": err.Error(),
+		"message": msg,
 	})
 }
 
@@ -160,20 +185,43 @@ func initLogger(logFile string) *slog.Logger {
 	return l
 }
 
-func slogMiddleware(l *slog.Logger) fiber.Handler {
-	return func(c fiber.Ctx) error {
-		start := time.Now()
-		err := c.Next()
-		latency := time.Since(start)
+func slogMiddleware(l *slog.Logger) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			start := time.Now()
+			err := next(c)
+			latency := time.Since(start)
 
-		l.Info("request",
-			"method", c.Method(),
-			"path", c.Path(),
-			"status", c.Response().StatusCode(),
-			"latency", latency.String(),
-			"ip", c.IP(),
-			"ua", c.Get("User-Agent"),
-		)
-		return err
+			l.Info("request",
+				"method", c.Request().Method,
+				"path", c.Path(),
+				"status", c.Response().Status,
+				"latency", latency.String(),
+				"ip", c.RealIP(),
+				"ua", c.Request().UserAgent(),
+			)
+			return err
+		}
+	}
+}
+
+func mimeByExt(path string) string {
+	switch {
+	case len(path) >= 4 && path[len(path)-4:] == ".css":
+		return "text/css; charset=utf-8"
+	case len(path) >= 3 && path[len(path)-3:] == ".js":
+		return "application/javascript"
+	case len(path) >= 5 && path[len(path)-5:] == ".html":
+		return "text/html; charset=utf-8"
+	case len(path) >= 4 && path[len(path)-4:] == ".svg":
+		return "image/svg+xml"
+	case len(path) >= 4 && path[len(path)-4:] == ".png":
+		return "image/png"
+	case len(path) >= 4 && path[len(path)-4:] == ".jpg":
+		return "image/jpeg"
+	case len(path) >= 5 && path[len(path)-5:] == ".json":
+		return "application/json"
+	default:
+		return "application/octet-stream"
 	}
 }

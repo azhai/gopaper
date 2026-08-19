@@ -7,8 +7,8 @@ import (
 
 	"github.com/azhai/gopaper/internal/model"
 
-	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -130,34 +130,36 @@ func (ag *AuthGuard) resetFailure(username string) {
 	delete(ag.lockUntil, username)
 }
 
-func (ag *AuthGuard) FiberMiddleware() fiber.Handler {
-	return func(c fiber.Ctx) error {
-		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			return c.Status(401).JSON(model.ErrorResponse{
-				Code:    40101,
-				Message: "未提供认证凭证",
-			})
-		}
+func (ag *AuthGuard) EchoMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			authHeader := c.Request().Header.Get("Authorization")
+			if authHeader == "" {
+				return c.JSON(401, model.ErrorResponse{
+					Code:    40101,
+					Message: "未提供认证凭证",
+				})
+			}
 
-		if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
-			return c.Status(401).JSON(model.ErrorResponse{
-				Code:    40101,
-				Message: "认证格式错误",
-			})
-		}
+			if len(authHeader) < 7 || authHeader[:7] != "Bearer " {
+				return c.JSON(401, model.ErrorResponse{
+					Code:    40101,
+					Message: "认证格式错误",
+				})
+			}
 
-		tokenString := authHeader[7:]
-		claims, err := ag.Validate(tokenString)
-		if err != nil {
-			return c.Status(401).JSON(model.ErrorResponse{
-				Code:    40101,
-				Message: "凭证无效或已过期",
-			})
-		}
+			tokenString := authHeader[7:]
+			claims, err := ag.Validate(tokenString)
+			if err != nil {
+				return c.JSON(401, model.ErrorResponse{
+					Code:    40101,
+					Message: "凭证无效或已过期",
+				})
+			}
 
-		c.Locals("username", claims.Username)
-		return c.Next()
+			c.Set("username", claims.Username)
+			return next(c)
+		}
 	}
 }
 

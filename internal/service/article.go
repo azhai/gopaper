@@ -89,6 +89,12 @@ func (af *ArticleForge) Update(ctx context.Context, slug string, input model.Art
 		article.Weight = input.Weight
 	}
 	article.Position = input.Position
+	if input.Draft != nil {
+		article.Draft = *input.Draft
+	}
+	if input.Summary != "" {
+		article.Summary = input.Summary
+	}
 	if input.Content != "" {
 		article.Content = input.Content
 	}
@@ -103,6 +109,8 @@ func (af *ArticleForge) Update(ctx context.Context, slug string, input model.Art
 		Comments: &article.Comments,
 		Weight:   article.Weight,
 		Position: article.Position,
+		Draft:    &article.Draft,
+		Summary:  article.Summary,
 		Content:  article.Content,
 	}, article.Slug)
 
@@ -252,6 +260,12 @@ func (af *ArticleForge) buildFileContent(input model.ArticleInput, slug string) 
 	}
 	if input.Position != "" {
 		sb.WriteString(fmt.Sprintf("position = %q\n", input.Position))
+	}
+	if input.Draft != nil && *input.Draft {
+		sb.WriteString(fmt.Sprintf("draft = %v\n", *input.Draft))
+	}
+	if input.Summary != "" {
+		sb.WriteString(fmt.Sprintf("summary = %q\n", input.Summary))
 	}
 	sb.WriteString("+++\n\n")
 	sb.WriteString(input.Content)

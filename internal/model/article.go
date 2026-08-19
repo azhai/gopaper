@@ -10,7 +10,9 @@ type Article struct {
 	Tags     []string `json:"tags,omitempty"`
 	Comments bool     `json:"comments"`
 	Weight   int      `json:"weight,omitempty"`
-	Position string   `json:"position,omitempty"` // template region: hero, features, news, etc.
+	Position string   `json:"position,omitempty"`
+	Draft    bool     `json:"draft,omitempty"`
+	Summary  string   `json:"summary,omitempty"`
 	Content  string   `json:"content"`
 	DirPath  string   `json:"dirPath"`
 	FilePath string   `json:"-"`
@@ -26,6 +28,8 @@ type ArticleInput struct {
 	Comments *bool    `json:"comments,omitempty"`
 	Weight   int      `json:"weight,omitempty"`
 	Position string   `json:"position,omitempty"`
+	Draft    *bool    `json:"draft,omitempty"`
+	Summary  string   `json:"summary,omitempty"`
 	Content  string   `json:"content"`
 }
 
@@ -37,6 +41,8 @@ type ArticleSummary struct {
 	Tags     []string `json:"tags,omitempty"`
 	Weight   int      `json:"weight,omitempty"`
 	Position string   `json:"position,omitempty"`
+	Draft    bool     `json:"draft,omitempty"`
+	Summary  string   `json:"summary,omitempty"`
 	DirPath  string   `json:"dirPath"`
 }
 
@@ -49,6 +55,8 @@ func ToSummary(a *Article) *ArticleSummary {
 		Tags:     a.Tags,
 		Weight:   a.Weight,
 		Position: a.Position,
+		Draft:    a.Draft,
+		Summary:  a.Summary,
 		DirPath:  a.DirPath,
 	}
 }
@@ -62,7 +70,10 @@ type MetaData struct {
 	Comments *bool    `toml:"comments"`
 	Weight   int      `toml:"weight"`
 	Position string   `toml:"position"`
+	Draft    *bool    `toml:"draft"`
+	Summary  string   `toml:"summary"`
 }
+
 
 type ImageInfo struct {
 	FileName     string    `json:"fileName"`

@@ -1,0 +1,13 @@
+SERVER_PORT = "3000"
+CONTENT_DIR = "./content"
+UPLOAD_DIR = "./uploads"
+JWT_SECRET = "change-me-to-a-random-secret"
+JWT_TTL = "24h"
+MAX_UPLOAD_SIZE = 5242880
+CACHE_SIZE = 67108864
+SITE_URL = "http://localhost:3000"
+ALLOWED_ORIGINS = ["http://localhost:3000"]
+
+[admin]
+USERNAME = "admin"
+PASSWORD = "$2a$10$replace-with-bcrypt-hash-of-your-password"

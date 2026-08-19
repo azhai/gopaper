@@ -5,6 +5,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>{{.Title}} - {{.SiteTitle}}</title>
+<meta name="description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
+<meta property="og:title" content="{{.Title}}">
+<meta property="og:description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
+<meta property="og:site_name" content="{{.SiteTitle}}">
+<meta property="og:type" content="article">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/style.css">
 <link rel="stylesheet" href="/static/github-light.css">

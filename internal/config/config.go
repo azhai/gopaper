@@ -18,6 +18,8 @@ type AppConfig struct {
 	JWT_TTL         string            `toml:"JWT_TTL"`
 	MAX_UPLOAD_SIZE int64             `toml:"MAX_UPLOAD_SIZE"`
 	CACHE_SIZE      int               `toml:"CACHE_SIZE"`
+	SITE_URL        string            `toml:"SITE_URL"`
+	ALLOWED_ORIGINS []string          `toml:"ALLOWED_ORIGINS"`
 	Admin           model.AdminConfig `toml:"admin"`
 }
 
@@ -29,6 +31,7 @@ func Load(configPath string) (*AppConfig, error) {
 		JWT_TTL:         "24h",
 		MAX_UPLOAD_SIZE: 5242880,
 		CACHE_SIZE:      67108864,
+		SITE_URL:        "http://localhost:3000",
 	}
 
 	if configPath != "" {
@@ -77,6 +80,9 @@ func (c *AppConfig) applyEnvOverrides() {
 		if n, err := strconv.Atoi(v); err == nil {
 			c.CACHE_SIZE = n
 		}
+	}
+	if v := os.Getenv("SITE_URL"); v != "" {
+		c.SITE_URL = v
 	}
 	if v := os.Getenv("ADMIN_USERNAME"); v != "" {
 		c.Admin.USERNAME = v
