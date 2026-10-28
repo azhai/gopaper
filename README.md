@@ -209,5 +209,5 @@ CONTACT_ADDRESS = "北京市朝阳区"
 
 - 内容文件存放在 `content/` 目录，每篇文章是一个 Markdown 文件加 TOML 前置元数据。
 - 图片上传后保存在 `uploads/` 目录。
-- 模板文件存放在 `web/templates/` 目录。
-- 布局配置保存在 `web/templates/layouts.toml`。
+- 模板文件存放在 `themes/default/layouts/` 目录。
+- 布局配置保存在 `themes/default/layouts.toml`。

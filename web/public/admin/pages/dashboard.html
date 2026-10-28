@@ -1,0 +1,173 @@
+<div class="dashboard-page" x-data="dashboardPage">
+  <template x-if="loading">
+    <div class="loading-state"><div class="spinner"></div><p>正在准备今天的工作…</p></div>
+  </template>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>工作台加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1 x-text="greeting"></h1>
+          <p x-text="pageDesc"></p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn btn-primary" href="/admin/content/new?type=article">{{icon:pen}} 写文章</a>
+          <a class="btn btn-ghost" href="/admin/content/new?type=page">{{icon:plus}} 新建页面</a>
+        </div>
+      </div>
+
+      <div class="quick-grid">
+        <a class="quick-card" href="/admin/content/new?type=article">
+          <span class="quick-icon">{{icon:pen}}</span>
+          <span class="quick-copy"><strong>写一篇文章</strong><span>发布新闻、动态或案例</span></span>
+          {{icon:chevron-right:quick-arrow}}
+        </a>
+        <a class="quick-card" href="/admin/content/new?type=product">
+          <span class="quick-icon">{{icon:layers}}</span>
+          <span class="quick-copy"><strong>新增产品</strong><span>维护规格和京东/淘宝下单链接</span></span>
+          {{icon:chevron-right:quick-arrow}}
+        </a>
+        <a class="quick-card" href="/admin/media">
+          <span class="quick-icon">{{icon:image-plus}}</span>
+          <span class="quick-copy"><strong>上传图片</strong><span x-text="'媒体库现有 ' + imageTotal + ' 张图片'"></span></span>
+          {{icon:chevron-right:quick-arrow}}
+        </a>
+        <a class="quick-card" href="/admin/homepage">
+          <span class="quick-icon">{{icon:layout}}</span>
+          <span class="quick-copy"><strong>装修首页</strong><span>调整横幅、服务卡片和联系信息</span></span>
+          {{icon:chevron-right:quick-arrow}}
+        </a>
+      </div>
+
+      <div class="dash-columns">
+        <div class="dash-main">
+          <div class="card dash-card">
+            <div class="dash-card-head">
+              <div>
+                <h2>需要处理</h2>
+                <p x-text="drafts.length > 0 ? '这些内容还是草稿，处理后才会出现在网站上。' : '没有待处理的草稿，保持得不错。'"></p>
+              </div>
+              <a class="btn btn-ghost btn-sm" href="/admin/content?type=draft" x-show="drafts.length > 0">查看全部草稿</a>
+            </div>
+            <div class="dash-empty" x-show="drafts.length === 0">
+              {{icon:check-circle}}
+              <div><strong>今日无待办</strong><span>可以写点新内容，或者检查一下首页。</span></div>
+            </div>
+            <div class="todo-list" x-show="drafts.length > 0">
+              <template x-for="item in drafts.slice(0, 5)" :key="item.slug">
+                <div class="todo-item">
+                  <span class="todo-icon">{{icon:article}}</span>
+                  <div class="todo-copy">
+                    <a class="todo-title" :href="editHref(item)" x-text="item.title || item.slug"></a>
+                    <span class="todo-meta" x-text="sectionLabel(item.dirPath) + ' · 保存于 ' + formatDate(item.date)"></span>
+                  </div>
+                  <a class="btn btn-ghost btn-sm" :href="editHref(item)">继续编辑</a>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="card dash-card">
+            <div class="dash-card-head">
+              <div>
+                <h2>最近内容</h2>
+                <p>最近编辑或发布的内容，按日期排序。</p>
+              </div>
+              <a class="btn btn-ghost btn-sm" href="/admin/content">全部内容</a>
+            </div>
+            <div class="empty-state" x-show="recent.length === 0">
+              <div class="empty-icon">{{icon:article}}</div>
+              <h3>网站还没有内容</h3>
+              <p>从一篇文章或一个产品页面开始。</p>
+              <div class="empty-action">
+                <a class="btn btn-primary" href="/admin/content/new?type=article">{{icon:pen}} 写第一篇文章</a>
+              </div>
+            </div>
+            <div class="recent-list" x-show="recent.length > 0">
+              <template x-for="item in recent" :key="item.slug">
+                <div class="recent-item">
+                  <div class="recent-main">
+                    <a class="recent-title" :href="editHref(item)" x-text="item.title || item.slug"></a>
+                    <div class="recent-meta">
+                      <span class="badge" :class="item.draft ? 'warn' : 'success'"><span class="badge-dot"></span><span x-text="item.draft ? '草稿' : '已发布'"></span></span>
+                      <span x-text="sectionLabel(item.dirPath)"></span>
+                      <span x-text="formatDate(item.date)"></span>
+                    </div>
+                  </div>
+                  <div class="recent-actions">
+                    <a class="icon-btn" x-show="!item.draft" :href="viewHref(item)" target="_blank" rel="noopener"
+                       :title="'查看 ' + (item.title || item.slug)" :aria-label="'查看 ' + (item.title || item.slug)"
+                       x-html="icon('external')"></a>
+                    <a class="icon-btn" :href="editHref(item)" :title="'编辑 ' + (item.title || item.slug)"
+                       :aria-label="'编辑 ' + (item.title || item.slug)" x-html="icon('edit')"></a>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="dash-side">
+          <div class="card dash-card">
+            <div class="dash-card-head">
+              <div>
+                <h2>网站检查</h2>
+                <p x-text="doneCount + '/' + health.length + ' 项已完成'"></p>
+              </div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" :style="'width:' + progressWidth"></div></div>
+            <div class="health-list">
+              <template x-for="item in health" :key="item.label">
+                <div class="health-item" :class="{ done: item.done }">
+                  <span class="health-icon" x-html="icon(item.done ? 'check-circle' : 'alert')"></span>
+                  <div class="health-copy">
+                    <strong x-text="item.label"></strong>
+                    <span x-text="item.hint"></span>
+                  </div>
+                  <span class="health-done" x-show="item.done">已完成</span>
+                  <a class="btn btn-ghost btn-sm" x-show="!item.done" :href="'/admin' + item.href" x-text="item.action"></a>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="card dash-card">
+            <div class="dash-card-head">
+              <div>
+                <h2>栏目</h2>
+                <p>网站导航和内容分类。</p>
+              </div>
+              <a class="btn btn-ghost btn-sm" href="/admin/settings?tab=sections">管理栏目</a>
+            </div>
+            <div class="dash-empty" x-show="dirs.length === 0">
+              {{icon:folder}}
+              <div><strong>还没有栏目</strong><span>先建一个栏目，再往里放内容。</span></div>
+            </div>
+            <div class="section-list" x-show="dirs.length > 0">
+              <template x-for="dir in dirs" :key="dir.dirPath">
+                <a class="section-row" :href="sectionHref(dir)">
+                  <span class="section-row-icon" x-html="icon(dir.dirType === 'page' ? 'file' : 'folder')"></span>
+                  <span class="section-row-copy">
+                    <strong x-text="dir.title || dir.dirPath"></strong>
+                    <span x-text="'/' + dir.dirPath + ' · ' + typeLabel(dir.dirType)"></span>
+                  </span>
+                  <span class="section-row-count" x-text="dir.articleCount"></span>
+                  {{icon:chevron-right}}
+                </a>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

@@ -1,0 +1,68 @@
+<div class="login-page" x-data="loginPage">
+  <div class="login-brand">
+    <div class="login-brand-inner">
+      <div class="login-logo">
+        <img src="/static/logo-mist.svg" alt="">
+        <span>GoPaper</span>
+      </div>
+      <h1>把网站交给最懂业务的人</h1>
+      <p class="login-lead">写内容、换图片、调整首页，都不需要写代码。</p>
+      <div class="login-points">
+        <div class="login-point">
+          <div class="login-point-icon">{{icon:pen}}</div>
+          <div><strong>写文章就像用文档</strong><span>支持 Markdown、草稿和预览</span></div>
+        </div>
+        <div class="login-point">
+          <div class="login-point-icon">{{icon:layout}}</div>
+          <div><strong>首页随时可调</strong><span>横幅、服务卡片和联系方式</span></div>
+        </div>
+        <div class="login-point">
+          <div class="login-point-icon">{{icon:zap}}</div>
+          <div><strong>保存立即生效</strong><span>访客刷新页面就能看到</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-form-wrap">
+    <div class="login-card">
+      <div>
+        <h2>登录管理后台</h2>
+        <p class="login-sub">使用管理员账号继续。</p>
+      </div>
+
+      <form class="login-form" @submit.prevent="submit()">
+        <div class="form-alert" role="alert" x-show="error" x-cloak>
+          {{icon:alert}}<span x-text="error"></span>
+        </div>
+
+        <label class="field">
+          <span class="field-label">用户名 <span class="req" aria-hidden="true">*</span></span>
+          <input class="form-control" type="text" placeholder="请输入用户名" autocomplete="username" required
+                 x-model="username" @input="error = ''" x-init="$nextTick(() => $el.focus())">
+        </label>
+
+        <label class="field">
+          <span class="field-label">密码 <span class="req" aria-hidden="true">*</span></span>
+          <span class="password-field">
+            <input class="form-control" :type="showPassword ? 'text' : 'password'" placeholder="请输入密码"
+                   autocomplete="current-password" required x-model="password" @input="error = ''">
+            <button class="icon-btn password-toggle" type="button" :aria-label="showPassword ? '隐藏密码' : '显示密码'" @click="showPassword = !showPassword">
+              {{icon:eye}}
+            </button>
+          </span>
+        </label>
+
+        <button class="btn btn-primary btn-block login-submit" type="submit" :disabled="submitting">
+          <span class="login-btn-label" x-show="!submitting">{{icon:logout}} 登录</span>
+          <span x-show="submitting" x-cloak>正在登录…</span>
+        </button>
+      </form>
+
+      <div class="login-foot">
+        <span>忘记密码？请联系网站管理员。</span>
+        <a href="/" target="_blank" rel="noopener">访问网站 {{icon:external}}</a>
+      </div>
+    </div>
+  </div>
+</div>

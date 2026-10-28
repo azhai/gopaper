@@ -1,0 +1,267 @@
+<div class="themes-page" x-data="themesPage">
+  <div class="loading-state" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+    <p>正在读取主题设置…</p>
+  </div>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>主题加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>主题设计</h1>
+          <p>调整布局、配色和字体，保存成多套主题，随时启用或安排到指定时间自动切换。</p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn btn-ghost" href="/" target="_blank" rel="noopener">{{icon:external}} 查看网站</a>
+          <button class="btn btn-primary" type="button" @click="startNew()">{{icon:plus}} 新建主题</button>
+        </div>
+      </div>
+
+      <div class="card theme-status">
+        <div class="theme-status-item">
+          <span class="theme-status-label">现在生效</span>
+          <template x-if="currentTheme">
+            <span class="badge success"><span class="badge-dot"></span><span x-text="currentTheme.name"></span></span>
+          </template>
+          <template x-if="!currentTheme">
+            <span class="badge neutral">内置默认样式</span>
+          </template>
+          <span class="theme-status-note" x-text="currentTheme ? '自 ' + readableTime(currentTheme.enabledAt) : '还没保存主题，网站使用自带样式'"></span>
+        </div>
+        <div class="theme-status-item">
+          <span class="theme-status-label">下一次切换</span>
+          <template x-if="upcomingTheme">
+            <span class="badge info">{{icon:clock}}<span x-text="upcomingTheme.name"></span></span>
+          </template>
+          <span class="theme-status-note" x-text="upcomingTheme ? readableTime(upcomingTheme.enabledAt) + ' 自动生效' : '没有安排中的定时启用'"></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" x-show="previewingDraft" @click="showSavedPreview(overview.currentId)">回到当前生效主题</button>
+      </div>
+
+      <div class="theme-workbench">
+        <div class="theme-main">
+          <div class="card theme-editor" x-show="editing" x-cloak>
+            <div class="theme-editor-head">
+              <h2 x-text="isNew ? '新建主题' : '编辑「' + draft.name + '」'"></h2>
+              <p>右侧预览按网站真实样式渲染，保存前就能看清效果。</p>
+              <button class="icon-btn" type="button" aria-label="关闭编辑" @click="closeEditor()">{{icon:x}}</button>
+            </div>
+
+            <div class="form-grid two">
+              <label class="field">
+                <span class="field-label">主题名称<span class="req" aria-hidden="true">*</span></span>
+                <input class="form-control" type="text" maxlength="40" placeholder="给我的主题起个名字"
+                  :value="draft.name" @input="updateName($event.target.value)">
+                <span class="field-hint">例如「春季促销」「商务蓝」</span>
+              </label>
+              <label class="field">
+                <span class="field-label">启用时间</span>
+                <div class="theme-schedule">
+                  <input class="form-control" type="datetime-local" :value="draft.enabledAt" @change="updateEnabledAt($event.target.value)">
+                  <button class="btn btn-ghost btn-sm" type="button" @click="enableNow()">现在启用</button>
+                </div>
+                <span class="field-hint" x-text="isNew ? '留空或选现在即刻上线；填将来的时间则到点自动切换' : '到点自动切换；留空保持原有安排'"></span>
+              </label>
+            </div>
+
+            <h3 class="theme-group-title">布局</h3>
+            <div class="form-grid three">
+              <label class="field">
+                <span class="field-label">内容宽度</span>
+                <select class="form-control" :value="draft.layout.container" @change="updateLayout('container', $event.target.value)">
+                  <template x-for="option in containers" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">圆角</span>
+                <select class="form-control" :value="draft.layout.radius" @change="updateLayout('radius', $event.target.value)">
+                  <template x-for="option in radii" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">卡片阴影</span>
+                <select class="form-control" :value="draft.layout.shadow" @change="updateLayout('shadow', $event.target.value)">
+                  <template x-for="option in shadows" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">顶部导航</span>
+                <select class="form-control" :value="draft.layout.header" @change="updateLayout('header', $event.target.value)">
+                  <template x-for="option in bands" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">首屏横幅</span>
+                <select class="form-control" :value="draft.layout.hero" @change="updateLayout('hero', $event.target.value)">
+                  <template x-for="option in bands" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">导航栏位置</span>
+                <select class="form-control" :value="draft.layout.position" @change="updateLayout('position', $event.target.value)">
+                  <template x-for="option in positions" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+            </div>
+
+            <h3 class="theme-group-title">配色</h3>
+            <div class="theme-colors">
+              <template x-for="field in colorFields" :key="field.key">
+                <div class="theme-color-field">
+                  <span class="theme-color-label" x-text="field.label"></span>
+                  <div class="theme-color-inputs">
+                    <input class="theme-color-swatch" type="color" :value="hexValue(draft.colors[field.key])"
+                      :aria-label="field.label + '取色器'" @input="updateColor(field.key, $event.target.value)">
+                    <input class="form-control theme-color-hex" type="text" maxlength="7" pattern="#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})"
+                      :value="draft.colors[field.key]" :aria-label="field.label + '色值'" @input="updateColor(field.key, $event.target.value)">
+                  </div>
+                  <span class="theme-color-hint" x-text="field.hint"></span>
+                </div>
+              </template>
+            </div>
+
+            <h3 class="theme-group-title">字体</h3>
+            <div class="form-grid three">
+              <label class="field">
+                <span class="field-label">正文</span>
+                <select class="form-control" :value="draft.fonts.body" @change="updateFont('body', $event.target.value)">
+                  <template x-for="option in fonts" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">标题</span>
+                <select class="form-control" :value="draft.fonts.heading" @change="updateFont('heading', $event.target.value)">
+                  <template x-for="option in fonts" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </label>
+              <label class="field">
+                <span class="field-label">正文字号</span>
+                <select class="form-control" :value="String(draft.fonts.size)" @change="updateFontSize($event.target.value)">
+                  <template x-for="size in sizes" :key="size">
+                    <option :value="String(size)" x-text="size + 'px'"></option>
+                  </template>
+                </select>
+                <span class="field-hint">影响正文与文章阅读尺寸</span>
+              </label>
+            </div>
+
+            <div class="theme-editor-foot">
+              <label class="toggle-row">
+                <span class="toggle-copy">
+                  <span class="toggle-label">滚动时保持导航可见</span>
+                  <span class="field-hint">长页面里导航一直吸顶，方便访客返回</span>
+                </span>
+                <input class="toggle-input" type="checkbox" :checked="draft.layout.position === 'sticky'" @change="toggleSticky($event.target.checked)">
+                <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+              </label>
+              <div class="theme-editor-actions">
+                <button class="btn btn-ghost" type="button" @click="closeEditor()">取消</button>
+                <button class="btn btn-primary" type="button" :disabled="saving" @click="saveDraft()">{{icon:save}} <span x-text="saveLabel"></span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card theme-section">
+            <div class="theme-section-head">
+              <h2>已保存的主题</h2>
+              <p>点击卡片可在右侧预览效果；「立即启用」会马上替换当前样式。</p>
+            </div>
+            <div class="empty-state" x-show="overview.themes.length === 0">
+              <div class="empty-icon">{{icon:palette}}</div>
+              <h3>还没有保存过主题</h3>
+              <p>用「新建主题」从零开始，或从下面的预设套一套再改。</p>
+              <div class="empty-action">
+                <button class="btn btn-primary" type="button" @click="startNew()">{{icon:plus}} 新建主题</button>
+              </div>
+            </div>
+            <div class="theme-cards" x-show="overview.themes.length > 0">
+              <template x-for="theme in overview.themes" :key="theme.id">
+                <div class="theme-card" :class="{ editing: theme.id === editingId }">
+                  <button class="theme-card-swatch" type="button" :aria-label="'预览 ' + theme.name" @click="showSavedPreview(theme.id)">
+                    <span class="swatch-band" :style="bandStyle(theme, 'header')"></span>
+                    <span class="swatch-body" :style="swatchBody(theme)">
+                      <span class="swatch-line long" :style="swatchLine(theme, false)"></span>
+                      <span class="swatch-line" :style="swatchLine(theme, true)"></span>
+                      <span class="swatch-pill" :style="swatchPill(theme)"></span>
+                    </span>
+                  </button>
+                  <div class="theme-card-info">
+                    <div class="theme-card-title">
+                      <strong x-text="theme.name"></strong>
+                      <span class="badge success" x-show="theme.id === overview.currentId">生效中</span>
+                      <span class="badge info" x-show="theme.id === overview.nextId">定时</span>
+                    </div>
+                    <span class="theme-card-time" x-text="layoutSummary(theme) + ' · ' + readableTime(theme.enabledAt)"></span>
+                  </div>
+                  <div class="theme-card-actions">
+                    <button class="btn btn-ghost btn-sm" type="button" title="编辑" :aria-label="'编辑 ' + theme.name" @click="editTheme(theme)">{{icon:edit}}</button>
+                    <button class="btn btn-ghost btn-sm" type="button" x-show="theme.id !== overview.currentId"
+                      :disabled="busyId === theme.id" @click="activateNow(theme)" x-text="busyId === theme.id ? '启用中…' : '立即启用'"></button>
+                    <button class="btn btn-ghost btn-sm" type="button" title="复制" :aria-label="'复制 ' + theme.name" @click="duplicateTheme(theme)">{{icon:copy}}</button>
+                    <button class="btn btn-ghost btn-danger-ghost btn-sm" type="button" title="删除" :aria-label="'删除 ' + theme.name"
+                      :disabled="busyId === theme.id" @click="removeTheme(theme)">{{icon:trash}}</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="card theme-section">
+            <div class="theme-section-head">
+              <h2>从预设开始</h2>
+              <p>预设只是起点，套用后可以继续改颜色、布局和字体，再保存成你自己的主题。</p>
+            </div>
+            <div class="theme-presets">
+              <template x-for="preset in overview.presets" :key="preset.name">
+                <div class="theme-preset">
+                  <span class="swatch-band" :style="bandStyle(preset, 'header')"></span>
+                  <div class="theme-preset-body">
+                    <strong x-text="preset.name"></strong>
+                    <span class="theme-card-time" x-text="layoutSummary(preset) + ' · ' + fontLabel(preset.fonts.heading)"></span>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" type="button" @click="usePreset(preset)">套用</button>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="theme-side">
+          <div class="card theme-preview">
+            <div class="theme-preview-head">
+              <h2>效果预览</h2>
+              <span class="theme-preview-label" x-text="previewLabel"></span>
+            </div>
+            <iframe class="theme-preview-frame" title="主题预览" :srcdoc="previewDoc"></iframe>
+            <p class="theme-preview-note">预览按网站真实样式渲染，只影响这一块，不会改动线上页面。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

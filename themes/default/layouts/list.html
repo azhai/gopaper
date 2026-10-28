@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>{{.Title}} - {{.SiteTitle}}</title>
+<title>{{if and .Title (ne .Title .SiteTitle)}}{{.Title}} - {{end}}{{.SiteTitle}}</title>
 <meta name="description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
 <meta property="og:title" content="{{.Title}}">
 <meta property="og:description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
@@ -12,14 +12,17 @@
 <meta property="og:type" content="website">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet" href="/static/github-light.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{{if .ThemeCSS}}<style>{{.ThemeCSS}}</style>{{end}}
+<script defer src="/static/js/microlight.js"></script>
+<script defer src="/static/js/highlight.js"></script>
+<script defer src="/static/js/shop.js"></script>
+<script defer src="/static/js/alpine.min.js"></script>
 </head>
 <body x-data="{mobileMenu: false}">
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="{{.SiteTitle}}" class="logo-img"></a>
+    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="" class="logo-img"><span class="logo-text">{{.SiteTitle}}</span></a>
     <button class="mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="菜单">
       <span></span><span></span><span></span>
     </button>
@@ -41,7 +44,51 @@
 
 <section class="list-section">
   <div class="container">
-    {{if .Articles}}
+    {{if eq .DirType "product"}}
+    {{if .ProductCategories}}
+    <nav class="product-filter" aria-label="按分类筛选产品">
+      <div class="filter-row">
+        <a class="cat-chip{{if not .ActiveCategory}} active{{end}}" href="{{.ClearCategoryHref}}"{{if not .ActiveCategory}} aria-current="page"{{end}}>全部</a>
+      </div>
+      {{range .ProductCategories}}
+      <div class="filter-row" role="group" aria-label="{{.Name}}">
+        <a class="cat-chip cat-parent{{if .Active}} active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}>{{.Name}} <span class="chip-count">{{.Count}}</span></a>
+        {{range .Children}}
+        <a class="cat-chip cat-child{{if .Active}} active{{end}}" href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}>{{.Name}} <span class="chip-count">{{.Count}}</span></a>
+        {{end}}
+      </div>
+      {{end}}
+    </nav>
+    {{end}}
+    {{if .Products}}
+    {{range .ProductGroups}}
+    <section class="product-group">
+      <h2 class="product-group-title">{{.Name}}</h2>
+      <div class="product-grid">
+        {{range .Products}}
+        <article class="product-card">
+          <a href="{{.Href}}" class="product-cover" aria-label="{{.Title}}">
+            {{if .Cover}}<img src="{{.Cover}}" alt="{{.Title}}" loading="lazy">{{else}}<span class="product-cover-empty">暂无图片</span>{{end}}
+          </a>
+          <div class="product-card-body">
+            <span class="product-category">{{.CategoryLeaf}}</span>
+            {{if .Improvements}}<span class="product-improved">已听劝 {{len .Improvements}} 次</span>{{end}}
+            <h3><a href="{{.Href}}">{{.Title}}</a></h3>
+            {{if .Summary}}<p>{{.Summary}}</p>{{end}}
+            <div class="product-card-foot">
+              <span class="product-price">{{.PriceLabel}}</span>
+              <span class="product-spec-count">{{if .Specs}}{{len .Specs}} 个规格{{else}}联系咨询{{end}}</span>
+            </div>
+          </div>
+        </article>
+        {{end}}
+      </div>
+    </section>
+    {{end}}
+    {{else}}
+    <div class="empty-state"><p>该分类下暂无产品。</p></div>
+    {{end}}
+    {{else if .Articles}}
     {{if eq .DirType "page"}}
     <div class="list-cards">
       {{range .Articles}}
@@ -131,6 +178,7 @@
   </div>
 </footer>
 
+{{template "shop" .}}
 </body>
 </html>
 {{end}}

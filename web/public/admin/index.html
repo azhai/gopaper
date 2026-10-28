@@ -1,14 +1,186 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-  <title>GoPaper 管理后台</title>
-  <script type="module" crossorigin src="/admin/assets/index-uqPwKoUB.js"></script>
-  <link rel="stylesheet" crossorigin href="/admin/assets/index-B7dklk_A.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoPaper 管理后台</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="stylesheet" href="/admin/admin.css">
+<script defer src="/admin/js/api.js"></script>
+<script defer src="/admin/js/icons.js"></script>
+<script defer src="/admin/js/ui.js"></script>
+<script defer src="/admin/js/store.js"></script>
+<script defer src="/admin/js/pages/login.js"></script>
+<script defer src="/admin/js/pages/dashboard.js"></script>
+<script defer src="/admin/js/pages/content.js"></script>
+<script defer src="/admin/js/pages/analytics.js"></script>
+<script defer src="/admin/js/pages/editor.js"></script>
+<script defer src="/admin/js/pages/homepage.js"></script>
+<script defer src="/admin/js/pages/media.js"></script>
+<script defer src="/admin/js/pages/themes.js"></script>
+<script defer src="/admin/js/pages/settings.js"></script>
+<script defer src="/admin/js/app.js"></script>
+<script defer src="/static/js/microlight.js"></script>
+<script defer src="/static/js/highlight.js"></script>
+<script defer src="/static/js/alpine.min.js"></script>
 </head>
-<body>
+<body x-data="adminShell" x-init="initShell()">
+
+<div id="admin-chrome" class="app-shell" :class="{ collapsed: $store.app.sidebarCollapsed }" x-show="$store.app.loggedIn" x-cloak>
+  <div class="sidebar-scrim" x-show="$store.app.sidebarOpen" @click="$store.app.closeSidebar()" aria-hidden="true"></div>
+
+  <aside class="sidebar" :class="{ open: $store.app.sidebarOpen }" aria-label="后台主导航">
+    <div class="sidebar-brand">
+      <div class="brand-mark"><img src="/static/logo-mist.svg" alt=""></div>
+      <div class="brand-copy">
+        <div class="brand-name">GoPaper</div>
+        <div class="brand-sub">小企业网站管理</div>
+      </div>
+      <button class="icon-btn sidebar-close" type="button" aria-label="关闭菜单" @click="$store.app.closeSidebar()">{{icon:x}}</button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">日常</div>
+        <a class="nav-link" href="/admin/dashboard" title="工作台" aria-label="工作台" :class="{ active: $store.app.isActive('/dashboard') }" :aria-current="$store.app.isActive('/dashboard') ? 'page' : null">
+          {{icon:home}}<span>工作台</span>
+        </a>
+        <a class="nav-link" href="/admin/content" title="内容" aria-label="内容" :class="{ active: $store.app.isActive('/content') }" :aria-current="$store.app.isActive('/content') ? 'page' : null">
+          {{icon:article}}<span>内容</span>
+        </a>
+        <a class="nav-link" href="/admin/analytics" title="统计" aria-label="统计" :class="{ active: $store.app.isActive('/analytics') }" :aria-current="$store.app.isActive('/analytics') ? 'page' : null">
+          {{icon:activity}}<span>统计</span>
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">网站</div>
+        <a class="nav-link" href="/admin/homepage" title="首页装修" aria-label="首页装修" :class="{ active: $store.app.isActive('/homepage') }" :aria-current="$store.app.isActive('/homepage') ? 'page' : null">
+          {{icon:layout}}<span>首页装修</span>
+        </a>
+        <a class="nav-link" href="/admin/themes" title="主题设计" aria-label="主题设计" :class="{ active: $store.app.isActive('/themes') }" :aria-current="$store.app.isActive('/themes') ? 'page' : null">
+          {{icon:palette}}<span>主题设计</span>
+        </a>
+        <a class="nav-link" href="/admin/media" title="媒体库" aria-label="媒体库" :class="{ active: $store.app.isActive('/media') }" :aria-current="$store.app.isActive('/media') ? 'page' : null">
+          {{icon:image}}<span>媒体库</span>
+        </a>
+        <a class="nav-link" href="/admin/settings" title="站点设置" aria-label="站点设置" :class="{ active: $store.app.isActive('/settings') }" :aria-current="$store.app.isActive('/settings') ? 'page' : null">
+          {{icon:settings}}<span>站点设置</span>
+        </a>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a class="sidebar-site-link" href="/" target="_blank" rel="noopener" title="查看网站">
+        {{icon:globe}}<span>查看网站</span>{{icon:external}}
+      </a>
+      <div class="sidebar-user">
+        <div class="avatar">A</div>
+        <div class="user-copy">
+          <div class="user-name">Admin</div>
+          <div class="user-role">网站管理员</div>
+        </div>
+        <button class="icon-btn ghost-inverse" type="button" title="退出登录" aria-label="退出登录" @click="$store.app.logout()">{{icon:logout}}</button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="icon-btn menu-toggle" type="button" :title="$store.app.sidebarToggleLabel" :aria-label="$store.app.sidebarToggleLabel" :aria-expanded="$store.app.sidebarExpanded ? 'true' : 'false'" @click="$store.app.toggleSidebar()">{{icon:menu}}</button>
+        <div class="topbar-crumb">
+          <span>后台</span>
+          <span class="crumb-sep">/</span>
+          <span class="crumb-current" x-text="$store.app.title"></span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="live-pill"><span class="live-dot"></span>修改即时生效</span>
+        <a class="btn btn-ghost btn-sm topbar-site" href="/" target="_blank" rel="noopener">访问网站 {{icon:external}}</a>
+      </div>
+    </header>
+    <main class="content" id="page-root">
+      <div class="loading-state"><div class="spinner"></div><p>正在加载后台…</p></div>
+    </main>
+  </div>
+</div>
+
+<div id="login-root" x-show="!$store.app.loggedIn" x-cloak>
+  <div class="loading-state"><div class="spinner"></div><p>正在加载后台…</p></div>
+</div>
+
+<div class="toast-container" x-show="$store.toast.items.length > 0" x-cloak>
+  <template x-for="item in $store.toast.items" :key="item.id">
+    <div class="toast-item" :class="item.type">
+      <span x-html="icon(item.type)"></span>
+      <div class="msg" x-text="item.message"></div>
+    </div>
+  </template>
+</div>
+
+<template x-if="$store.overlay.open">
+  <div class="overlay-backdrop" @click.self="$store.overlay.close()">
+    <div class="overlay-dialog" role="dialog" aria-modal="true" :aria-label="$store.overlay.title">
+      <h3>
+        <span class="icon-circle" :class="$store.overlay.variant" x-html="icon($store.overlay.variant === 'danger' ? 'alert' : ($store.overlay.variant === 'warn' ? 'warning' : 'info'))"></span>
+        <span x-text="$store.overlay.title"></span>
+      </h3>
+      <p x-text="$store.overlay.message"></p>
+      <template x-if="$store.overlay.type === 'prompt'">
+        <input class="form-control" type="text" x-model="$store.overlay.promptValue" @keydown.enter.prevent="$store.overlay.accept()">
+      </template>
+      <div class="overlay-actions">
+        <button class="btn btn-ghost" type="button" x-show="$store.overlay.type === 'confirm'" @click="$store.overlay.cancel()" x-text="$store.overlay.cancelText"></button>
+        <button class="btn" type="button" :class="$store.overlay.variant === 'danger' ? 'btn-danger' : 'btn-primary'" @click="$store.overlay.accept()" x-text="$store.overlay.confirmText"></button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<div class="overlay-backdrop media-backdrop" x-show="$store.picker.open" x-cloak @click.self="$store.picker.close()">
+  <div class="media-modal" role="dialog" aria-modal="true" aria-label="选择图片" @dragover.prevent @drop.prevent="$store.picker.uploadFiles($event.dataTransfer.files)">
+    <div class="media-modal-head">
+      <div>
+        <h3>选择图片</h3>
+        <p>点击图片插入正文，也可以直接上传新图片。</p>
+      </div>
+      <button class="icon-btn" type="button" aria-label="关闭" @click="$store.picker.close()">{{icon:x}}</button>
+    </div>
+    <div class="media-modal-tools">
+      <div class="search-box">
+        {{icon:search}}
+        <input type="search" placeholder="按文件名搜索" aria-label="搜索图片" x-model="$store.picker.keyword">
+      </div>
+      <button class="btn btn-primary btn-sm" type="button" :disabled="$store.picker.uploading" @click="pickFile()">
+        {{icon:upload}}<span x-text="$store.picker.uploading ? '上传中…' : '上传图片'"></span>
+      </button>
+      <input id="picker-file" class="visually-hidden" type="file" accept="image/*" multiple @change="$store.picker.uploadFiles($event.target.files); $event.target.value = ''">
+    </div>
+    <div class="media-modal-body">
+      <div class="loading-state" x-show="$store.picker.loading">
+        <div class="spinner"></div>
+        <p>正在读取媒体库…</p>
+      </div>
+      <div class="empty-state compact" x-show="!$store.picker.loading && $store.picker.filtered().length === 0">
+        <div class="empty-icon">{{icon:image}}</div>
+        <h3 x-text="$store.picker.images.length === 0 ? '媒体库还是空的' : '没有匹配的图片'"></h3>
+        <p x-text="$store.picker.images.length === 0 ? '点击右上角上传第一张图片。' : '换个关键词试试。'"></p>
+      </div>
+      <div class="media-pick-grid" x-show="!$store.picker.loading && $store.picker.filtered().length > 0">
+        <template x-for="img in $store.picker.filtered()" :key="img.fileName">
+          <button class="media-pick" type="button" :title="'插入 ' + img.originalName" @click="$store.picker.pick(img)">
+            <img :src="img.uploadPath" :alt="img.originalName" loading="lazy">
+            <span class="media-pick-name" x-text="img.originalName"></span>
+          </button>
+        </template>
+      </div>
+    </div>
+    <div class="media-modal-foot">
+      <span x-text="$store.picker.images.length + ' 张图片'"></span>
+      <span>支持拖拽文件到窗口上传</span>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

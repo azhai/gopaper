@@ -1,0 +1,129 @@
+<div class="media-page" x-data="mediaPage">
+  <div class="loading-state" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+    <p>正在读取媒体库…</p>
+  </div>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>媒体库加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>媒体库</h1>
+          <p x-text="'共 ' + total + ' 张图片。上传后可直接复制链接，插入文章或首页。'"></p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-primary" type="button" :disabled="uploading" @click="chooseFile()">{{icon:upload}} <span x-text="uploadLabel"></span></button>
+        </div>
+      </div>
+
+      <div class="media-drop" :class="{ dragging: dragging }"
+        @dragover.prevent="dragging = true"
+        @dragleave.self="dragging = false"
+        @drop.prevent="onDrop($event)">
+        {{icon:image-plus}}
+        <div>
+          <strong x-text="dragging ? '松开即可上传' : '把图片拖到这里'"></strong>
+          <span>支持 jpg / png / gif / webp / svg，单张不超过 5MB</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" @click="chooseFile()">选择文件</button>
+        <input class="visually-hidden" type="file" accept="image/*" multiple aria-label="选择图片文件" x-ref="file" @change="onFileChange($event)">
+      </div>
+
+      <div class="upload-progress" x-show="uploading">
+        <span x-text="'正在上传 ' + uploadDone + '/' + uploadTotal"></span>
+        <div class="progress-track"><div class="progress-fill" :style="'width: ' + progressWidth"></div></div>
+      </div>
+
+      <div class="toolbar media-toolbar">
+        <div class="search-box">
+          {{icon:search}}
+          <input type="search" placeholder="按文件名搜索" aria-label="搜索图片" x-model="keyword" @input="search()">
+        </div>
+        <span class="toolbar-note" x-text="keyword ? filtered.length + ' 张匹配' : '每页 24 张'"></span>
+      </div>
+
+      <template x-if="images.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">{{icon:image}}</div>
+          <h3>媒体库还是空的</h3>
+          <p>上传第一张图片，之后就能在文章和首页里使用。</p>
+          <div class="empty-action">
+            <button class="btn btn-primary" type="button" @click="chooseFile()">{{icon:upload}} 上传第一张图片</button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="images.length > 0 && filtered.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">{{icon:search}}</div>
+          <h3>没有匹配的图片</h3>
+          <p>换个文件名关键词试试。</p>
+          <div class="empty-action">
+            <button class="btn btn-ghost" type="button" @click="clearSearch()">清除搜索</button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="filtered.length > 0">
+        <div>
+          <div class="media-grid">
+            <template x-for="img in pageItems" :key="img.fileName">
+              <div class="media-card">
+                <button class="media-thumb" type="button" :aria-label="'预览 ' + img.originalName" @click="lightbox = img">
+                  <img :src="img.uploadPath" :alt="img.originalName" loading="lazy">
+                </button>
+                <div class="media-info">
+                  <strong class="media-name" :title="img.originalName" x-text="img.originalName"></strong>
+                  <span class="media-meta" x-text="formatSize(img.fileSize) + ' · ' + typeName(img.fileType)"></span>
+                </div>
+                <div class="media-actions">
+                  <button class="btn btn-ghost btn-sm" type="button" title="复制图片链接" @click="copyImageUrl(img)">{{icon:link}} 链接</button>
+                  <button class="btn btn-ghost btn-sm" type="button" title="复制 Markdown" @click="copyMarkdown(img)">{{icon:copy}} Markdown</button>
+                  <button class="btn btn-danger-ghost btn-sm" type="button" title="删除图片" @click="remove(img)">{{icon:trash}}</button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <div class="pagination" x-show="pageCount > 1">
+            <button class="btn btn-ghost btn-sm" type="button" :disabled="currentPage <= 1" @click="goPage(currentPage - 1)">{{icon:chevron-left}} 上一页</button>
+            <span class="pagination-info" x-text="'第 ' + currentPage + ' / ' + pageCount + ' 页'"></span>
+            <button class="btn btn-ghost btn-sm" type="button" :disabled="currentPage >= pageCount" @click="goPage(currentPage + 1)">下一页 {{icon:chevron-right}}</button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="lightbox">
+        <div class="overlay-backdrop" @click.self="lightbox = null">
+          <div class="lightbox-card" role="dialog" aria-modal="true" :aria-label="lightbox.originalName">
+            <div class="lightbox-image"><img :src="lightbox.uploadPath" :alt="lightbox.originalName"></div>
+            <div class="lightbox-side">
+              <button class="icon-btn lightbox-close" type="button" aria-label="关闭预览" @click="lightbox = null">{{icon:x}}</button>
+              <h3 x-text="lightbox.originalName"></h3>
+              <div class="lightbox-meta">
+                <span x-text="formatSize(lightbox.fileSize)"></span>
+                <span x-text="typeName(lightbox.fileType)"></span>
+                <span x-text="lightbox.uploadTime"></span>
+              </div>
+              <code class="lightbox-path" x-text="lightbox.uploadPath"></code>
+              <div class="lightbox-actions">
+                <button class="btn btn-primary btn-block" type="button" @click="copyImageUrl(lightbox)">{{icon:link}} 复制图片链接</button>
+                <button class="btn btn-ghost btn-block" type="button" @click="copyMarkdown(lightbox)">{{icon:copy}} 复制 Markdown</button>
+                <button class="btn btn-danger-ghost btn-block" type="button" @click="remove(lightbox)">{{icon:trash}} 删除图片</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+</div>

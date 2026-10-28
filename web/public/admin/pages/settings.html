@@ -1,0 +1,251 @@
+<div class="settings-page" x-data="settingsPage">
+  <div class="loading-state" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+    <p>正在读取站点设置…</p>
+  </div>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>站点设置加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>站点设置</h1>
+          <p>管理网站名称、联系方式和栏目结构。修改保存后立即生效。</p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn btn-ghost" href="/" target="_blank" rel="noopener">{{icon:external}} 查看网站</a>
+        </div>
+      </div>
+
+      <div class="settings-tabs">
+        <div class="tabs" role="tablist" aria-label="设置分类">
+          <template x-for="tabItem in tabs" :key="tabItem.value">
+            <button class="tab" type="button" role="tab"
+              :aria-selected="tab === tabItem.value ? 'true' : 'false'"
+              :class="{ active: tab === tabItem.value }"
+              @click="switchTab(tabItem.value)">
+              <span x-text="tabItem.label"></span>
+              <span class="tab-count" x-show="tabItem.count !== null" x-text="tabItem.count"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <div class="card settings-card" x-show="tab === 'brand'">
+        <div class="settings-card-head">
+          <h2>基本信息</h2>
+          <p>这些信息会显示在网站标题、搜索结果和浏览器标签上。</p>
+        </div>
+        <label class="field">
+          <span class="field-label">网站名称<span class="req" aria-hidden="true">*</span></span>
+          <input class="form-control" type="text" maxlength="60" placeholder="我的公司"
+            :value="form.SITE_TITLE" @input="setField('SITE_TITLE', $event.target.value)">
+          <span class="field-hint">建议使用公司或品牌全称，例如「杭州某某科技有限公司」</span>
+        </label>
+        <label class="field">
+          <span class="field-label">网站简介</span>
+          <textarea class="form-control" rows="3" maxlength="200" placeholder="专业的企业级解决方案提供商"
+            :value="form.SITE_DESC" @input="setField('SITE_DESC', $event.target.value)"></textarea>
+          <span class="field-hint">一句话说明公司做什么，会出现在首页和搜索结果中</span>
+        </label>
+        <label class="field">
+          <span class="field-label">列表每页条数</span>
+          <input class="form-control narrow" type="number" min="1" max="100"
+            :value="form.ARTICLES_PER_PAGE" @input="setField('ARTICLES_PER_PAGE', parseInt($event.target.value, 10) || 0)">
+          <span class="field-hint">新闻、文档等栏目列表每页显示的内容数量，建议 10–20</span>
+        </label>
+      </div>
+
+      <div class="card settings-card" x-show="tab === 'contact'">
+        <div class="settings-card-head">
+          <h2>联系方式</h2>
+          <p>会显示在首页「联系我们」区域和网站页脚，方便客户找到你。</p>
+        </div>
+        <div class="form-grid two">
+          <label class="field">
+            <span class="field-label">邮箱</span>
+            <input class="form-control" type="email" placeholder="hello@example.com"
+              :value="form.CONTACT_EMAIL" @input="setField('CONTACT_EMAIL', $event.target.value)">
+          </label>
+          <label class="field">
+            <span class="field-label">电话</span>
+            <input class="form-control" type="text" placeholder="400-000-0000"
+              :value="form.CONTACT_PHONE" @input="setField('CONTACT_PHONE', $event.target.value)">
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">地址</span>
+          <input class="form-control" type="text" placeholder="城市、街道、门牌号"
+            :value="form.CONTACT_ADDRESS" @input="setField('CONTACT_ADDRESS', $event.target.value)">
+          <span class="field-hint">门店或办公地址，没有可以留空</span>
+        </label>
+      </div>
+
+      <div class="card settings-card" x-show="tab === 'footer'">
+        <div class="settings-card-head">
+          <h2>页脚</h2>
+          <p>显示在每个页面最底部，通常放版权信息和备案号。</p>
+        </div>
+        <label class="field">
+          <span class="field-label">版权文字</span>
+          <input class="form-control" type="text" placeholder="All rights reserved."
+            :value="form.FOOTER_TEXT" @input="setField('FOOTER_TEXT', $event.target.value)">
+          <span class="field-hint">例如：© 2026 我的公司 版权所有</span>
+        </label>
+        <label class="field">
+          <span class="field-label">备案号</span>
+          <input class="form-control" type="text" placeholder="京ICP备XXXXXXXX号"
+            :value="form.ICP" @input="setField('ICP', $event.target.value)">
+          <span class="field-hint">中国大陆网站备案号，没有可以留空</span>
+        </label>
+      </div>
+
+      <div class="sections-panel" x-show="tab === 'sections'">
+        <div class="card settings-card">
+          <div class="settings-card-head">
+            <h2>新增栏目</h2>
+            <p>栏目是网站导航的一级入口，例如「产品服务」「新闻动态」。创建后即可往里添加内容。</p>
+          </div>
+          <div class="form-grid two">
+            <label class="field">
+              <span class="field-label">栏目名称<span class="req" aria-hidden="true">*</span></span>
+              <input class="form-control" type="text" maxlength="60" placeholder="例如：客户案例" x-model="newSection.title">
+            </label>
+            <label class="field">
+              <span class="field-label">网址标识<span class="req" aria-hidden="true">*</span></span>
+              <input class="form-control" type="text" pattern="[a-z0-9-]*" placeholder="cases" x-model="newSection.name">
+              <span class="field-hint">小写英文、数字和连字符，创建后不建议修改</span>
+            </label>
+            <label class="field">
+              <span class="field-label">栏目类型</span>
+              <select class="form-control" x-model="newSection.type">
+                <option value="page">单页（介绍等固定页面）</option>
+                <option value="product">产品目录（分类、规格、外链下单）</option>
+                <option value="news">文章列表（新闻、动态、案例）</option>
+                <option value="docs">文档列表</option>
+              </select>
+              <span class="field-hint">产品目录支持分类、规格和京东/淘宝下单；文章适合新闻、案例列表</span>
+            </label>
+            <label class="field">
+              <span class="field-label">导航顺序</span>
+              <input class="form-control narrow" type="number" x-model.number="newSection.navOrder">
+              <span class="field-hint">数字越小越靠前</span>
+            </label>
+          </div>
+          <button class="btn btn-primary" type="button" :disabled="creating" @click="createSection()">{{icon:plus}} <span x-text="creating ? '创建中…' : '创建栏目'"></span></button>
+        </div>
+
+        <div class="card settings-card">
+          <div class="settings-card-head">
+            <h2>现有栏目</h2>
+            <p>调整名称、顺序或是否显示在导航中。网址标识创建后不可修改，避免旧链接失效。</p>
+          </div>
+          <div class="dash-empty" x-show="sections.length === 0">
+            {{icon:folder}}
+            <div>
+              <strong>还没有栏目</strong>
+              <span>用上面的表单创建第一个栏目。</span>
+            </div>
+          </div>
+          <div class="section-edit-list" x-show="sections.length > 0">
+            <template x-for="section in sections" :key="section.dirPath">
+              <div class="section-edit-card">
+                <div class="section-edit-head">
+                  <div class="section-edit-title">
+                    <strong x-text="section.title || section.dirPath"></strong>
+                    <span x-text="'/' + section.dirPath"></span>
+                  </div>
+                  <div class="section-edit-meta">
+                    <span class="badge neutral" x-text="typeLabel(section.type)"></span>
+                    <span class="muted" x-text="countFor(section.dirPath) + ' 条内容'"></span>
+                    <a class="btn btn-ghost btn-sm" :href="'/admin/content?dir=' + encodeURIComponent(section.dirPath)">查看内容</a>
+                  </div>
+                </div>
+                <div class="form-grid three">
+                  <label class="field">
+                    <span class="field-label">栏目名称</span>
+                    <input class="form-control" type="text" maxlength="60" x-model="section.title" @input="section.dirty = true">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">类型</span>
+                    <select class="form-control" x-model="section.type" @change="section.dirty = true">
+                      <option value="page">单页</option>
+                      <option value="product">产品目录</option>
+                      <option value="news">文章列表</option>
+                      <option value="docs">文档列表</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">导航顺序</span>
+                    <input class="form-control" type="number" x-model.number="section.navOrder" @input="section.dirty = true">
+                  </label>
+                </div>
+                <div class="section-edit-foot">
+                  <label class="toggle-row">
+                    <span class="toggle-copy">
+                      <span class="toggle-label">在导航中隐藏</span>
+                      <span class="field-hint">隐藏后栏目仍可通过链接访问</span>
+                    </span>
+                    <input class="toggle-input" type="checkbox" x-model="section.navHide" @change="section.dirty = true">
+                    <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+                  </label>
+                  <div class="section-edit-actions" x-show="section.dirty">
+                    <button class="btn btn-ghost btn-sm" type="button" @click="resetSection(section)">撤销</button>
+                    <button class="btn btn-primary btn-sm" type="button" :disabled="savingSection === section.dirPath"
+                      @click="saveSection(section)" x-text="savingSection === section.dirPath ? '保存中…' : '保存栏目'"></button>
+                  </div>
+                  <span class="muted section-saved" x-show="!section.dirty">已保存</span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="card settings-card" x-show="tab === 'advanced'">
+        <div class="settings-card-head">
+          <h2>高级</h2>
+          <p>内容以 Markdown 文件保存。通过后台修改会立即生效，这里通常不需要操作。</p>
+        </div>
+        <div class="advanced-row">
+          <div>
+            <strong>重建内容索引</strong>
+            <span>如果直接修改了 content 目录里的文件，可以手动刷新索引。</span>
+          </div>
+          <button class="btn btn-ghost" type="button" :disabled="refreshing" @click="refreshCache()">{{icon:refresh}} <span x-text="refreshing ? '刷新中…' : '刷新'"></span></button>
+        </div>
+        <p class="side-note" x-show="lastRefresh" x-text="lastRefresh"></p>
+        <div class="advanced-row">
+          <div>
+            <strong>发布方式</strong>
+            <span>保存即发布，不需要额外的构建步骤。草稿不会出现在网站上。</span>
+          </div>
+          <span class="badge success">即时生效</span>
+        </div>
+        <div class="advanced-row">
+          <div>
+            <strong>换主题</strong>
+            <span>主题文件位于 themes 目录，需要开发人员协助更换。</span>
+          </div>
+          <span class="muted">联系开发者</span>
+        </div>
+      </div>
+
+      <div class="save-bar" :class="{ visible: siteDirty }" x-show="isSiteTab">
+        <span class="save-bar-text" x-text="siteStatus"></span>
+        <div>
+          <button class="btn btn-ghost" type="button" x-show="siteDirty" @click="discardSite()">放弃修改</button>
+          <button class="btn btn-primary" type="button" :disabled="savingSite || !siteDirty" @click="saveSite()">{{icon:save}} <span x-text="saveLabel"></span></button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

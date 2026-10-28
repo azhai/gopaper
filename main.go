@@ -2,16 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/azhai/gopaper/internal/app"
-	"github.com/azhai/gopaper/internal/config"
-	"github.com/azhai/gopaper/internal/handler"
-	"github.com/azhai/gopaper/internal/service"
+	"github.com/azhai/gopaper/config"
+	"github.com/azhai/gopaper/handlers"
+	"github.com/azhai/gopaper/services"
 )
 
 func main() {
@@ -38,23 +39,20 @@ func runServer(dev bool) {
 		os.Exit(1)
 	}
 
-	app, err := app.New(cfg, dev)
+	application, err := newApp(cfg, dev)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "init app: %v\n", err)
 		os.Exit(1)
 	}
 
-	go func() {
-		if err := app.Start(); err != nil {
-			fmt.Fprintf(os.Stderr, "start server: %v\n", err)
-		}
-	}()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	if err := app.Shutdown(); err != nil {
+	if err := application.Start(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		fmt.Fprintf(os.Stderr, "start server: %v\n", err)
+		os.Exit(1)
+	}
+	if err := application.Close(); err != nil {
 		fmt.Fprintf(os.Stderr, "shutdown: %v\n", err)
 	}
 }
@@ -69,15 +67,16 @@ func runBuild() error {
 		Level: slog.LevelInfo,
 	}))
 
-	cache := service.NewCacheVault(cfg.CACHE_SIZE, logger)
-	scanner := service.NewScanner(cfg.CONTENT_DIR, logger)
-	renderer := service.NewRenderer()
+	cache := services.NewCacheVault(cfg.CACHE_SIZE, logger)
+	scanner := services.NewScanner(cfg.CONTENT_DIR, logger)
+	renderer := services.NewRenderer()
 
 	if err := cache.Refresh(context.Background(), scanner); err != nil {
 		return fmt.Errorf("scan: %w", err)
 	}
 
-	pageHandler := handler.NewPageHandler(cache, renderer, cfg.SITE_URL)
-	builder := handler.NewBuilder(pageHandler, "dist", logger)
+	pageHandler := handlers.NewPageHandler(cache, renderer, cfg.SITE_URL)
+	pageHandler.SetThemes(services.NewThemeForge(cfg.CONTENT_DIR, logger), logger)
+	builder := handlers.NewBuilder(pageHandler, "dist", logger)
 	return builder.Build(context.Background())
 }

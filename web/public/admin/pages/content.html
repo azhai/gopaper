@@ -1,0 +1,132 @@
+<div class="content-page" x-data="contentPage">
+  <template x-if="loading">
+    <div class="loading-state"><div class="spinner"></div><p>正在整理内容…</p></div>
+  </template>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>内容加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>内容</h1>
+          <p>文章用于新闻、动态和案例；产品用于上架商品；页面用于公司介绍等固定内容。</p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn btn-primary" href="/admin/content/new?type=article">{{icon:pen}} 写文章</a>
+          <a class="btn btn-ghost" href="/admin/content/new?type=product">{{icon:layers}} 新建产品</a>
+          <a class="btn btn-ghost" href="/admin/content/new?type=page">{{icon:plus}} 新建页面</a>
+        </div>
+      </div>
+
+      <div class="toolbar content-toolbar">
+        <div class="tabs" role="tablist" aria-label="内容类型">
+          <button class="tab" type="button" role="tab" :aria-selected="tab === 'all' ? 'true' : 'false'" :class="{ active: tab === 'all' }" @click="tab = 'all'">
+            全部 <span class="tab-count" x-text="total"></span>
+          </button>
+          <button class="tab" type="button" role="tab" :aria-selected="tab === 'article' ? 'true' : 'false'" :class="{ active: tab === 'article' }" @click="tab = 'article'">
+            文章 <span class="tab-count" x-text="articleTotal"></span>
+          </button>
+          <button class="tab" type="button" role="tab" :aria-selected="tab === 'product' ? 'true' : 'false'" :class="{ active: tab === 'product' }" @click="tab = 'product'">
+            产品 <span class="tab-count" x-text="productTotal"></span>
+          </button>
+          <button class="tab" type="button" role="tab" :aria-selected="tab === 'page' ? 'true' : 'false'" :class="{ active: tab === 'page' }" @click="tab = 'page'">
+            页面 <span class="tab-count" x-text="pageTotal"></span>
+          </button>
+          <button class="tab" type="button" role="tab" :aria-selected="tab === 'draft' ? 'true' : 'false'" :class="{ active: tab === 'draft' }" @click="tab = 'draft'">
+            草稿 <span class="tab-count" x-text="draftCount"></span>
+          </button>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="search-box">
+          {{icon:search}}
+          <input type="search" placeholder="搜索标题、摘要或标签" aria-label="搜索内容" x-model="keyword">
+        </div>
+        <select class="form-control select-compact" aria-label="按栏目筛选" x-model="dirPath">
+          <option value="">全部栏目</option>
+          <template x-for="dir in dirs" :key="dir.dirPath">
+            <option :value="dir.dirPath" x-text="dir.title || dir.dirPath"></option>
+          </template>
+        </select>
+      </div>
+
+      <template x-if="items.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon">{{icon:article}}</div>
+          <h3>还没有内容</h3>
+          <p>先写一篇文章，上架一个产品，或者创建一个介绍页面。</p>
+          <div class="empty-action">
+            <div class="empty-buttons">
+              <a class="btn btn-primary" href="/admin/content/new?type=article">{{icon:pen}} 写第一篇文章</a>
+              <a class="btn btn-ghost" href="/admin/content/new?type=product">{{icon:layers}} 上架产品</a>
+              <a class="btn btn-ghost" href="/admin/content/new?type=page">{{icon:plus}} 创建页面</a>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="items.length > 0 && rows.length === 0">
+        <div class="empty-state">
+          <div class="empty-icon" x-html="icon(emptyInfo.icon)"></div>
+          <h3 x-text="emptyInfo.title"></h3>
+          <p x-text="emptyInfo.desc"></p>
+          <div class="empty-action">
+            <button class="btn btn-ghost" type="button" x-show="emptyInfo.clear" @click="clearFilters()">清除筛选</button>
+            <a class="btn btn-primary" x-show="!emptyInfo.clear" :href="emptyInfo.href" x-text="emptyInfo.action"></a>
+          </div>
+        </div>
+      </template>
+
+      <div class="table-wrap" x-show="rows.length > 0">
+        <table class="data-table content-table">
+          <thead>
+            <tr>
+              <th>标题</th>
+              <th class="col-type">类型</th>
+              <th class="col-section">栏目</th>
+              <th class="col-status">状态</th>
+              <th class="col-date">日期</th>
+              <th class="col-actions">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="item in rows" :key="item.slug">
+              <tr>
+                <td data-label="标题">
+                  <div class="content-title-cell">
+                    <a class="content-title" :href="editHref(item)" x-text="item.title || item.slug"></a>
+                    <span class="content-summary" x-show="item.summary" x-text="item.summary"></span>
+                  </div>
+                </td>
+                <td data-label="类型" class="col-type">
+                  <span class="badge" :class="typeBadge(item).tone" x-text="typeBadge(item).text"></span>
+                </td>
+                <td data-label="栏目" class="col-section" x-text="sectionLabel(item.dirPath)"></td>
+                <td data-label="状态" class="col-status">
+                  <span class="badge" :class="item.draft ? 'warn' : 'success'"><span class="badge-dot"></span><span x-text="item.draft ? '草稿' : '已发布'"></span></span>
+                </td>
+                <td data-label="日期" class="col-date muted" x-text="formatDate(item.date)"></td>
+                <td data-label="操作" class="col-actions">
+                  <div class="row-actions">
+                    <a class="btn btn-ghost btn-sm" x-show="!item.draft" :href="viewHref(item)" target="_blank" rel="noopener" title="在前台查看">{{icon:external}} 查看</a>
+                    <a class="btn btn-ghost btn-sm" :href="editHref(item)">{{icon:edit}} 编辑</a>
+                    <button class="btn btn-danger-ghost btn-sm" type="button" @click="remove(item)">{{icon:trash}} 删除</button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="list-note" x-show="showListNote" x-text="'共 ' + total + ' 条内容，当前显示最近 ' + items.length + ' 条。可使用栏目筛选查看更多。'"></p>
+    </div>
+  </template>
+</div>

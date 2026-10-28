@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-10-28 管理后台迁至 Alpine.js
+
+- **现状**：后台是纯静态 Alpine.js 3.17.5 SPA，源码即产物，位于 `web/public/admin/`（`index.html` + `admin.css` + `js/` + `pages/`），由 `//go:embed all:public` 打包；无 Node、pnpm、Vite、TypeScript、Mithril。
+- **移除**：`web/admin/`（TS 源码与构建配置）、`web/public/admin/assets/`（旧 Vite 产物）、`web/public/{app.js,index.js,icons.js,types.js,components/,routes/,services/}`（旧 tsc 输出）；`Makefile` 不再有 `front` 目标，`clean` 不再删除 `web/public/admin`。
+- **代码高亮**：服务端 goldmark-highlighting/chroma 与 `github-light.css` 移除，前端用 `microlight.js` + `highlight.js`（`window.highlightCode`）在站点页面和后台预览统一高亮。
+
 ## 2026-08-19 架构评估（基线快照）
 
 ### 1. 技术栈与项目布局
@@ -12,12 +18,12 @@
 |------|------|
 | 语言 | Go 1.26.4（`go.mod`，版本号偏高，疑似预览/笔误，待确认） |
 | Web 框架 | Echo v4 (`labstack/echo/v4`) |
-| Markdown | goldmark + goldmark-highlighting（GFM、定义列表、代码高亮） |
+| Markdown | goldmark（GFM、定义列表）；代码高亮由前端 microlight.js 完成 |
 | Front Matter 解析 | `pelletier/go-toml/v2`，**TOML 格式 `+++` 分隔**，非 YAML |
 | 模板引擎 | Go 标准库 `html/template`（`templates/*.html`） |
 | 认证 | JWT (`golang-jwt/jwt/v5`) + bcrypt 密码 |
 | 缓存 | `VictoriaMetrics/fastcache`（内存，启动全量扫描） |
-| 管理后台 | Vite + TypeScript SPA（`web/admin/`），构建产物 embed 进二进制 |
+| 管理后台 | Alpine.js 3.17.5 静态 SPA（`web/public/admin/`，无构建步骤），embed 进二进制 |
 | 数据存储 | **纯文件系统，无 SQLite** |
 | 日志 | `log/slog` + `azhai/gobus/log` 按天分卷 |
 
@@ -100,4 +106,25 @@ common/     slug 生成 + 输入校验
 
 ---
 
-（后续发现按日期追加于此之下）
+## 数码配件示例数据与真实来源（2026-10-28）
+
+- **产品数据**：闪迪 CZ48（32/64/128/256GB，¥34/57/107/239，SDCZ48-032G/064G/128G/256G）、小米移动电源3（10000mAh 22.5W ¥79 PLM12ZM；20000mAh 18W ¥109 PLM18ZM）、索尼 WH-CH520（五色 ¥279，WH-CH520/B、W、L、C、P）、绿联 CD244 65W（单头 ¥99 CD244；套装 ¥128 CD244-KIT）。参数与参考价交叉核对自 ZOL、PConline、苏宁、什么值得买、京东商品页与绿联官网，时间为 2026-10-28。
+- **图片**：CZ48 用 homedo 白底图（避开 ZOL 水印），其余取京东/品牌官方图；统一用 `sips` 转格式、PIL 裁剪后存 `uploads/`，文件名与产品 slug 对应。
+- **首页新闻区**：原 `buildIndexData` 用 `collectArticles` 把产品、指南、关于全塞进“上新动态”。新增 `indexArticles`：`NEWS_LINK` 指向的子树优先，目录不存在时回退全站，避免其他站点因空配置丢内容。`TestIndexArticles` 覆盖三条分支。
+- **价格口径**：全部写“参考价，以下单页为准”，本站不收款、不配送，京东/淘宝链接统一用搜索词而非可能失效的商品 ID。
+- **内容备份**：旧示例内容在 `/tmp/gopaper-content-backup-20261028/`；2016 年的 PHP 示例文 `last-month-day.md` 已移入该备份，不随站点发布。
+
+## 访问统计实现要点（2026-10-28）
+
+- **记录时机**：Echo 的响应一旦写出（`c.HTMLBlob`），之后 `c.SetCookie` 不再生效。首次实现把 `Set-Cookie` 放在渲染后，导致每次访问都生成新访客、用户数等于访问数；正确做法是在渲染前解析/写入 `gp_visitor` Cookie，渲染成功后再记账。
+- **记录范围**：仅已发布的详情页（产品/文章/新闻）。`renderArticle` 与 `DirList` 中两处直接渲染文章的分支都要记账；列表页、首页、单页（`DIR_TYPE=page`）和 `gopaper build` 不计入，避免内容浏览被重复放大。
+- **分类口径**：`DIR_TYPE=product` → 产品；`DIR_TYPE=news` 或路径在 `news/` 下 → 新闻；其余（含 `docs`、根目录文章）→ 文章；单页跳过。与后台“文章”筛选口径一致，同时把新闻单独拆出。
+- **存储**：`content/_analytics.jsonl` 追加写，扫描器只认 `.md`，不会把日志当内容。启动时加载并按 31 天保留期压缩；内存上限 10 万条，超限丢最旧 20% 并压缩重开文件。`content/` 已在 `.gitignore` 中，日志不会入库。
+- **分桶边界**：`sort.Search` 的谓词必须是“第一个 start 晚于事件时间”（`starts[i].After(at)`），写成 `!After` 会把当前桶的事件判成 -1；5m/1h/1d 用整分/5 分/整点对齐，7d/30d 用本地零点对齐。
+- **去重**：访客按 128 位随机 Cookie 去重；总用户、分类用户、单内容用户分别维护集合，不能把内容行用户数相加当分类用户数。
+
+## 本地视觉验证要点（2026-10-28）
+
+- **headless Chrome 最小窗口宽度 500px**：`--window-size=390,1600` 的实际 `innerWidth` 仍是 500，移动端截图会被裁成 390，看起来像横向溢出。判断是否真的溢出必须用 CDP：`Emulation.setDeviceMetricsOverride {width:390, mobile:true}` 后再读 `document.documentElement.scrollWidth`。
+- **懒加载与全页截图**：`captureBeyondViewport` 不会触发 `loading="lazy"`，列表远端卡片的封面会是空白；截图前先把 `img[loading=lazy]` 改成 `eager` 并等待加载。
+- **透明 PNG 的调色板陷阱**：PIL 对带透明度的 P 模式 PNG 直接 `convert("RGB")` 会用调色板 0 号色（常见为绿色）填底，做联系表时应先 `convert("RGBA")` 再与白底 `alpha_composite`。

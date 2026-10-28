@@ -1,0 +1,61 @@
+{{define "shop"}}
+<button type="button" class="cart-fab" id="cart-fab" aria-haspopup="dialog" aria-controls="cart-drawer"
+  :aria-label="$store.cart.fabLabel" @click="$store.cart.setOpen(true)">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+    <path d="M3 6h18"></path>
+    <path d="M16 10a4 4 0 0 1-8 0"></path>
+  </svg>
+  <span class="cart-fab-label">购物车</span>
+  <span class="cart-badge" id="cart-badge" x-show="$store.cart.count > 0" x-text="$store.cart.count" x-cloak>0</span>
+</button>
+
+<div class="cart-drawer" id="cart-drawer" x-data="cartDrawer" x-show="$store.cart.open" x-cloak
+  @keydown.window="onKeydown($event)">
+  <div class="cart-backdrop" @click="close"></div>
+  <aside class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+    <header class="cart-head">
+      <div>
+        <h2 id="cart-title">购物车</h2>
+        <p>勾选产品后，到京东或淘宝完成下单。</p>
+      </div>
+      <button type="button" class="cart-close" @click="close" aria-label="关闭购物车">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </header>
+    <div class="cart-body" id="cart-items">
+      <p class="cart-empty" x-show="$store.cart.count === 0" x-cloak>购物车还是空的。打开产品详情，选择规格后加入购物车。</p>
+      <template x-for="item in $store.cart.items" :key="item.key">
+        <div class="cart-item">
+          <input type="checkbox"
+            :checked="$store.cart.isSelected(item.key)"
+            @change="$store.cart.toggle(item.key, $event.target.checked)"
+            :aria-label="'选择 ' + item.title + (item.spec ? '，' + item.spec : '')">
+          <div class="cart-item-main">
+            <template x-if="item.href">
+              <a class="cart-item-title" :href="item.href" x-text="item.title"></a>
+            </template>
+            <template x-if="!item.href">
+              <span class="cart-item-title" x-text="item.title"></span>
+            </template>
+            <span class="cart-item-meta" x-text="item.meta"></span>
+          </div>
+          <button type="button" class="cart-remove" @click="$store.cart.remove(item.key)"
+            :aria-label="'从购物车移除 ' + item.title">&times;</button>
+        </div>
+      </template>
+    </div>
+    <footer class="cart-foot">
+      <p class="cart-note">本站只做选品汇总，不收款、不发货；支付和配送在京东/淘宝完成。</p>
+      <div class="cart-checkout">
+        <button type="button" class="cart-order cart-order-jd" @click="$store.cart.checkout('jd')"
+          :disabled="$store.cart.platformCount('jd') === 0">京东下单（<span x-text="$store.cart.platformCount('jd')">0</span>）</button>
+        <button type="button" class="cart-order cart-order-tb" @click="$store.cart.checkout('taobao')"
+          :disabled="$store.cart.platformCount('taobao') === 0">淘宝下单（<span x-text="$store.cart.platformCount('taobao')">0</span>）</button>
+      </div>
+      <button type="button" class="cart-copy" @click="$store.cart.copyChecklist()">复制选品清单</button>
+      <p class="cart-status" id="cart-status" role="status" x-text="$store.cart.status"></p>
+    </footer>
+  </aside>
+</div>
+{{end}}

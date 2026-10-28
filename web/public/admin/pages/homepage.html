@@ -1,0 +1,219 @@
+<div class="homepage-page" x-data="homepagePage">
+  <div class="loading-state" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+    <p>正在读取首页设置…</p>
+  </div>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>首页设置加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>首页装修</h1>
+          <p>按顺序安排首页的每个区域。保存后立即生效，不需要懂代码。</p>
+        </div>
+        <div class="page-head-actions">
+          <a class="btn btn-ghost" href="/" target="_blank" rel="noopener">{{icon:external}} 查看首页</a>
+          <button class="btn btn-primary" type="button" :disabled="saving" @click="save()">{{icon:save}} <span x-text="saveLabel"></span></button>
+        </div>
+      </div>
+
+      <div class="home-layout">
+        <div class="home-editor">
+          <div class="card home-section">
+            <div class="home-section-head">
+              <span class="section-no">01</span>
+              <div>
+                <h2>顶部横幅</h2>
+                <p>访客进入网站第一眼看到的内容。</p>
+              </div>
+            </div>
+            <div class="form-grid two">
+              <label class="field">
+                <span class="field-label">大标题</span>
+                <input class="form-control" type="text" placeholder="例如：让好产品被更多人看见" x-model="form.HERO_TITLE" @input="dirty = true">
+              </label>
+              <label class="field">
+                <span class="field-label">副标题</span>
+                <input class="form-control" type="text" placeholder="一句话说明你能提供什么" x-model="form.HERO_SUBTITLE" @input="dirty = true">
+              </label>
+            </div>
+            <div class="form-grid two">
+              <label class="field">
+                <span class="field-label">按钮文字</span>
+                <input class="form-control" type="text" placeholder="了解我们的服务" x-model="form.HERO_CTA_TEXT" @input="dirty = true">
+                <span class="field-hint">留空则不显示按钮</span>
+              </label>
+              <label class="field">
+                <span class="field-label">按钮链接</span>
+                <input class="form-control" type="text" placeholder="/products" x-model="form.HERO_CTA_LINK" @input="dirty = true">
+                <span class="field-hint">填站内路径，例如 /products</span>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">背景图</span>
+              <div class="media-field">
+                <input class="form-control" type="text" placeholder="/uploads/hero.jpg" x-model="form.HERO_IMAGE" @input="dirty = true">
+                <button class="btn btn-ghost btn-sm" type="button" @click="chooseHero()">{{icon:image}} 从媒体库选择</button>
+                <button class="btn btn-ghost btn-sm" type="button" x-show="form.HERO_IMAGE" @click="removeHero()">移除</button>
+              </div>
+              <span class="field-hint">建议使用横向大图；留空则使用纯色背景</span>
+            </label>
+            <div class="media-preview" x-show="form.HERO_IMAGE">
+              <img :src="form.HERO_IMAGE" alt="首页横幅背景预览">
+            </div>
+          </div>
+
+          <div class="card home-section">
+            <div class="home-section-head">
+              <span class="section-no">02</span>
+              <div>
+                <h2>产品与服务</h2>
+                <p>用卡片告诉访客你卖什么、解决什么问题。</p>
+              </div>
+            </div>
+            <label class="field">
+              <span class="field-label">区块标题</span>
+              <input class="form-control" type="text" placeholder="产品与服务" x-model="form.FEATURE_TITLE" @input="dirty = true">
+            </label>
+            <div class="feature-list">
+              <template x-for="(card, index) in form.FEATURES" :key="index">
+                <div class="feature-edit">
+                  <span class="feature-index" x-text="index + 1"></span>
+                  <div class="feature-fields">
+                    <input class="form-control feature-icon" type="text" placeholder="图标" title="图标（可填一个 emoji）"
+                      :aria-label="'第 ' + (index + 1) + ' 张卡片的图标'" x-model="card.icon" @input="dirty = true">
+                    <input class="form-control" type="text" placeholder="卡片标题" :aria-label="'第 ' + (index + 1) + ' 张卡片的标题'" x-model="card.title" @input="dirty = true">
+                    <input class="form-control" type="text" placeholder="一句话介绍" :aria-label="'第 ' + (index + 1) + ' 张卡片的介绍'" x-model="card.desc" @input="dirty = true">
+                    <input class="form-control" type="text" placeholder="链接，例如 /products" :aria-label="'第 ' + (index + 1) + ' 张卡片的链接'" x-model="card.link" @input="dirty = true">
+                  </div>
+                  <div class="feature-tools">
+                    <button class="icon-btn" type="button" title="上移" aria-label="上移" :disabled="index === 0" @click="moveFeature(index, -1)">{{icon:arrow-up}}</button>
+                    <button class="icon-btn" type="button" title="下移" aria-label="下移" :disabled="index === form.FEATURES.length - 1" @click="moveFeature(index, 1)">{{icon:arrow-down}}</button>
+                    <button class="icon-btn danger" type="button" title="删除卡片" aria-label="删除卡片" @click="removeFeature(index)">{{icon:trash}}</button>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <button class="btn btn-ghost btn-sm" type="button" @click="addFeature()">{{icon:plus}} 添加卡片</button>
+
+            <div class="linked-pages" x-show="featured.length > 0">
+              <h4>来自页面的卡片</h4>
+              <p>这些页面在编辑时选择了「产品与服务卡片」，会自动出现在首页。</p>
+              <template x-for="item in featured" :key="item.slug">
+                <div class="linked-page">
+                  <span x-text="item.title"></span>
+                  <a :href="'/admin/content/' + encodeURIComponent(item.slug) + '/edit'">编辑页面 {{icon:chevron-right}}</a>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="card home-section">
+            <div class="home-section-head">
+              <span class="section-no">03</span>
+              <div>
+                <h2>新闻动态</h2>
+                <p>自动展示最近发布的文章，适合持续更新。</p>
+              </div>
+            </div>
+            <div class="form-grid two">
+              <label class="field">
+                <span class="field-label">区块标题</span>
+                <input class="form-control" type="text" placeholder="新闻动态" x-model="form.NEWS_TITLE" @input="dirty = true">
+              </label>
+              <label class="field">
+                <span class="field-label">「查看全部」链接</span>
+                <input class="form-control" type="text" placeholder="/news" x-model="form.NEWS_LINK" @input="dirty = true">
+                <span class="field-hint">通常指向新闻栏目，例如 /news</span>
+              </label>
+            </div>
+            <p class="side-note">首页自动显示最新内容。想把某条内容撤下，把它的状态改为「草稿」即可。</p>
+          </div>
+
+          <div class="card home-section">
+            <div class="home-section-head">
+              <span class="section-no">04</span>
+              <div>
+                <h2>联系我们</h2>
+                <p>让客户能立刻找到你。</p>
+              </div>
+            </div>
+            <div class="form-grid three">
+              <label class="field">
+                <span class="field-label">邮箱</span>
+                <input class="form-control" type="email" placeholder="hello@example.com" x-model="form.CONTACT_EMAIL" @input="dirty = true">
+              </label>
+              <label class="field">
+                <span class="field-label">电话</span>
+                <input class="form-control" type="text" placeholder="400-000-0000" x-model="form.CONTACT_PHONE" @input="dirty = true">
+              </label>
+              <label class="field">
+                <span class="field-label">地址</span>
+                <input class="form-control" type="text" placeholder="城市、街道、门牌号" x-model="form.CONTACT_ADDRESS" @input="dirty = true">
+              </label>
+            </div>
+            <p class="side-note">联系信息也会同步显示在「站点设置」里。</p>
+          </div>
+        </div>
+
+        <div class="home-preview">
+          <div class="wireframe-card">
+            <div class="wireframe-head">
+              <span>结构预览</span>
+              <span class="muted">最终效果以网站为准</span>
+            </div>
+            <div class="wireframe">
+              <div class="wf-hero">
+                <div class="wf-hero-eyebrow">GoPaper</div>
+                <h3 x-text="form.HERO_TITLE || '首页大标题'"></h3>
+                <p x-text="form.HERO_SUBTITLE || '副标题会显示在这里'"></p>
+                <span class="wf-cta" x-show="form.HERO_CTA_TEXT" x-text="form.HERO_CTA_TEXT"></span>
+              </div>
+              <div class="wf-section">
+                <div class="wf-section-title" x-text="form.FEATURE_TITLE || '产品与服务'"></div>
+                <div class="wf-cards" x-show="form.FEATURES.length > 0">
+                  <template x-for="(card, index) in form.FEATURES.slice(0, 4)" :key="index">
+                    <div class="wf-card">
+                      <span class="wf-icon" x-text="card.icon || '·'"></span>
+                      <strong x-text="card.title || '卡片标题'"></strong>
+                      <span x-text="card.desc || '卡片介绍'"></span>
+                    </div>
+                  </template>
+                </div>
+                <div class="wf-placeholder" x-show="form.FEATURES.length === 0">还没有服务卡片</div>
+              </div>
+              <div class="wf-section">
+                <div class="wf-section-title" x-text="form.NEWS_TITLE || '新闻动态'"></div>
+                <div class="wf-line"></div>
+                <div class="wf-line short"></div>
+                <div class="wf-line"></div>
+              </div>
+              <div class="wf-section">
+                <div class="wf-section-title">联系我们</div>
+                <div class="wf-line" x-text="form.CONTACT_EMAIL || '邮箱'"></div>
+                <div class="wf-line short" x-text="form.CONTACT_PHONE || '电话'"></div>
+                <div class="wf-line short" x-text="form.CONTACT_ADDRESS || '地址'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="save-bar" :class="{ visible: dirty }">
+        <span class="save-bar-text" x-text="statusText"></span>
+        <div>
+          <button class="btn btn-primary" type="button" :disabled="saving" @click="save()">{{icon:save}} <span x-text="saveLabel"></span></button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>

@@ -1,0 +1,332 @@
+<div class="editor-page" x-data="editorPage">
+  <div class="loading-state" x-show="loading" x-cloak>
+    <div class="spinner"></div>
+    <p>正在打开编辑器…</p>
+  </div>
+
+  <template x-if="!loading && loadError">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>无法打开内容</h3>
+      <p x-text="loadError"></p>
+      <div class="error-actions">
+        <button class="btn btn-primary" type="button" @click="load()">重试</button>
+        <a class="btn btn-ghost" href="/admin/content">返回内容</a>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="!loading && !loadError">
+    <div>
+      <div class="editor-head">
+        <button class="btn btn-ghost btn-sm" type="button" @click="leave()">{{icon:chevron-left}} 返回内容</button>
+        <div class="editor-head-text">
+          <h1 x-text="(isEdit ? '编辑' : '新建') + noun"></h1>
+          <div class="editor-head-meta">
+            <span class="badge" :class="form.draft ? 'warn' : 'success'">
+              <span class="badge-dot"></span>
+              <span x-text="form.draft ? '草稿' : '已发布'"></span>
+            </span>
+            <span class="dot-sep"></span>
+            <span x-text="pageLabel"></span>
+            <template x-if="isEdit">
+              <span class="dot-sep"></span>
+            </template>
+            <template x-if="isEdit">
+              <span x-text="lastSaved || '已载入'"></span>
+            </template>
+          </div>
+        </div>
+        <div class="editor-head-actions">
+          <a class="btn btn-ghost btn-sm" x-show="previewable" :href="publicHref" target="_blank" rel="noopener">{{icon:eye}} 查看页面</a>
+        </div>
+      </div>
+
+      <div class="editor-body">
+        <div class="editor-main">
+          <div class="card editor-writing">
+            <label class="visually-hidden" for="editor-title">标题</label>
+            <input id="editor-title" class="editor-title" type="text" maxlength="200" :placeholder="titlePlaceholder"
+              x-model="form.title" @input="dirty = true">
+
+            <div class="editor-modebar">
+              <div class="segmented">
+                <button class="segment" type="button" :class="{ active: tab === 'write' }" :aria-pressed="tab === 'write' ? 'true' : 'false'" @click="tab = 'write'">
+                  {{icon:pen}} 编写
+                </button>
+                <button class="segment" type="button" :class="{ active: tab === 'preview' }" :aria-pressed="tab === 'preview' ? 'true' : 'false'" @click="openPreview()">
+                  {{icon:eye}} 预览
+                </button>
+              </div>
+              <div class="md-toolbar" x-show="tab === 'write'">
+                <button class="icon-btn md-btn" type="button" title="二级标题" aria-label="二级标题" @mousedown.prevent @click="insert('heading')">{{icon:heading}}</button>
+                <button class="icon-btn md-btn" type="button" title="加粗" aria-label="加粗" @mousedown.prevent @click="insert('bold')">{{icon:bold}}</button>
+                <button class="icon-btn md-btn" type="button" title="斜体" aria-label="斜体" @mousedown.prevent @click="insert('italic')">{{icon:italic}}</button>
+                <button class="icon-btn md-btn" type="button" title="列表" aria-label="列表" @mousedown.prevent @click="insert('list')">{{icon:list}}</button>
+                <button class="icon-btn md-btn" type="button" title="引用" aria-label="引用" @mousedown.prevent @click="insert('quote')">{{icon:quote}}</button>
+                <button class="icon-btn md-btn" type="button" title="代码" aria-label="代码" @mousedown.prevent @click="insert('code')">{{icon:code}}</button>
+                <button class="icon-btn md-btn" type="button" title="插入链接" aria-label="插入链接" @mousedown.prevent @click="insertLink()">{{icon:link}}</button>
+                <button class="icon-btn md-btn" type="button" title="插入图片" aria-label="插入图片" @mousedown.prevent @click="pickImage()">{{icon:image}}</button>
+              </div>
+              <button class="btn btn-ghost btn-sm" type="button" x-show="tab === 'preview'" @click="openPreview()">
+                {{icon:refresh}} <span x-text="previewLoading ? '渲染中…' : '刷新预览'"></span>
+              </button>
+            </div>
+
+            <textarea class="editor-textarea" x-show="tab === 'write'" x-ref="content" aria-label="正文"
+              :placeholder="contentPlaceholder" x-model="form.content" @input="dirty = true"></textarea>
+
+            <div class="editor-preview" x-show="tab === 'preview'">
+              <div class="loading-state" x-show="previewLoading">
+                <div class="spinner"></div>
+                <p>正在渲染预览…</p>
+              </div>
+              <div class="preview-content" x-ref="preview" x-show="!previewLoading" x-html="previewHtml || emptyPreview"></div>
+            </div>
+
+            <div class="editor-foot">
+              <span class="muted" x-text="'约 ' + charCount + ' 字'"></span>
+              <span class="muted" x-text="footStatus"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-aside">
+          <div class="card publish-card">
+            <div class="publish-state">
+              <span class="badge" :class="form.draft ? 'warn' : 'success'">
+                <span class="badge-dot"></span>
+                <span x-text="form.draft ? '草稿' : '已发布'"></span>
+              </span>
+              <span class="muted" x-text="publishHint"></span>
+            </div>
+            <div class="publish-url">
+              {{icon:link}}
+              <span x-text="publicHref"></span>
+            </div>
+            <div class="publish-actions">
+              <button class="btn btn-primary btn-block" type="button" :disabled="!!saving" @click="save('publish')">
+                <template x-if="form.draft">
+                  <span>{{icon:send}}</span>
+                </template>
+                <template x-if="!form.draft">
+                  <span>{{icon:save}}</span>
+                </template>
+                <span x-text="saving === 'publish' ? (form.draft ? '发布中…' : '更新中…') : (form.draft ? '发布' : '更新内容')"></span>
+              </button>
+              <template x-if="form.draft">
+                <button class="btn btn-ghost btn-block" type="button" :disabled="!!saving" @click="save('draft')">
+                  {{icon:save}} <span x-text="saving === 'draft' ? '保存中…' : '保存草稿'"></span>
+                </button>
+              </template>
+              <template x-if="!form.draft">
+                <button class="btn btn-ghost btn-block" type="button" :disabled="!!saving" @click="toDraft()">
+                  {{icon:eye}} 转为草稿
+                </button>
+              </template>
+            </div>
+            <p class="publish-hint">快捷键：⌘/Ctrl + S 保存草稿</p>
+          </div>
+
+          <div class="card editor-side-card">
+            <h3 class="side-title">归属</h3>
+            <label class="field">
+              <span class="field-label">栏目<span class="req" aria-hidden="true">*</span></span>
+              <select class="form-control" :disabled="isEdit || availableDirs.length === 0" x-model="form.dirPath" @change="dirty = true">
+                <option value="" x-text="availableDirs.length === 0 ? '还没有可用栏目' : '请选择栏目'"></option>
+                <template x-for="dir in availableDirs" :key="dir.dirPath">
+                  <option :value="dir.dirPath" x-text="dir.title || dir.dirPath"></option>
+                </template>
+              </select>
+              <span class="field-hint" x-show="isEdit">发布后不能更换栏目，避免网址失效</span>
+            </label>
+            <p class="side-note" x-show="availableDirs.length === 0">还没有可用栏目。到 <a href="/admin/settings?tab=sections">站点设置 → 栏目</a> 新建一个。</p>
+            <label class="field">
+              <span class="field-label">网址标识</span>
+              <input class="form-control" type="text" pattern="[a-z0-9-]*" placeholder="about-us" :disabled="isEdit" x-model="form.slug" @input="dirty = true">
+              <span class="field-hint" x-text="isEdit ? '网址已固定，修改会影响旧链接' : '可留空自动生成；中文标题会生成 p-日期时间 格式'"></span>
+            </label>
+          </div>
+
+          <div class="card editor-side-card" x-show="isProduct">
+            <h3 class="side-title">商品信息</h3>
+            <div class="form-grid two">
+              <label class="field">
+                <span class="field-label">一级分类</span>
+                <input class="form-control" type="text" maxlength="20" placeholder="例如：软件产品" x-model="form.category" @input="dirty = true">
+                <span class="field-hint">留空显示为「未分类」</span>
+              </label>
+              <label class="field">
+                <span class="field-label">二级分类</span>
+                <input class="form-control" type="text" maxlength="20" placeholder="例如：网站建设" x-model="form.subCategory" @input="dirty = true">
+                <span class="field-hint">选填，最多两级</span>
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">封面图</span>
+              <template x-if="form.cover">
+                <div class="cover-preview">
+                  <img :src="form.cover" alt="产品封面预览">
+                  <div class="cover-actions">
+                    <button class="btn btn-ghost btn-sm" type="button" @click="chooseCover()">更换</button>
+                    <button class="btn btn-danger-ghost btn-sm" type="button" @click="removeCover()">移除</button>
+                  </div>
+                </div>
+              </template>
+              <template x-if="!form.cover">
+                <button class="cover-empty" type="button" @click="chooseCover()">{{icon:image-plus}} 选择封面图</button>
+              </template>
+              <span class="field-hint">用于产品列表卡片，建议使用 4:3 横向图片</span>
+            </label>
+
+            <div class="spec-editor">
+              <div class="spec-editor-head">
+                <h4>规格与下单链接</h4>
+                <span class="muted" x-text="form.specs.length + ' 个规格'"></span>
+              </div>
+              <p class="side-note" x-show="form.specs.length === 0">添加规格后，客户才能在产品详情页选择并加入购物车。</p>
+              <template x-for="(spec, index) in form.specs" :key="index">
+                <div class="spec-edit-card">
+                  <div class="spec-edit-head">
+                    <strong x-text="'规格 ' + (index + 1)"></strong>
+                    <button class="icon-btn" type="button" title="删除规格" :aria-label="'删除规格 ' + (index + 1)" @click="removeSpec(index)">{{icon:trash}}</button>
+                  </div>
+                  <label class="field">
+                    <span class="field-label">规格名称<span class="req" aria-hidden="true">*</span></span>
+                    <input class="form-control" type="text" maxlength="60" placeholder="例如：标准版" x-model="spec.name" @input="dirty = true">
+                  </label>
+                  <div class="form-grid two">
+                    <label class="field">
+                      <span class="field-label">价格文字</span>
+                      <input class="form-control" type="text" maxlength="30" placeholder="¥9,800" x-model="spec.price" @input="dirty = true">
+                    </label>
+                    <label class="field">
+                      <span class="field-label">SKU<span class="req" aria-hidden="true">*</span></span>
+                      <input class="form-control" type="text" maxlength="60" placeholder="CMS-STD" x-model="spec.sku" @input="dirty = true">
+                      <span class="field-hint">同一产品内不可重复</span>
+                    </label>
+                  </div>
+                  <label class="field">
+                    <span class="field-label">京东链接</span>
+                    <input class="form-control" type="url" placeholder="https://item.jd.com/..." x-model="spec.jdUrl" @input="dirty = true">
+                    <span class="field-hint">选填，需以 http(s):// 开头</span>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">淘宝链接</span>
+                    <input class="form-control" type="url" placeholder="https://item.taobao.com/..." x-model="spec.taobaoUrl" @input="dirty = true">
+                    <span class="field-hint">选填，需以 http(s):// 开头</span>
+                  </label>
+                </div>
+              </template>
+              <button class="btn btn-ghost btn-sm btn-block" type="button" @click="addSpec()">{{icon:plus}} 添加规格</button>
+            </div>
+
+            <div class="improvement-editor">
+              <div class="spec-editor-head">
+                <h4>听劝记录</h4>
+                <span class="muted" x-text="form.improvements.length + ' 条'"></span>
+              </div>
+              <p class="side-note" x-show="form.improvements.length === 0">记录采纳过的客户反馈，前台按日期倒序展示，用来体现「听劝」。</p>
+              <template x-for="(item, index) in form.improvements" :key="index">
+                <div class="improvement-edit-card">
+                  <div class="spec-edit-head">
+                    <strong x-text="'记录 ' + (index + 1)"></strong>
+                    <button class="icon-btn" type="button" title="删除记录" :aria-label="'删除听劝记录 ' + (index + 1)" @click="removeImprovement(index)">{{icon:trash}}</button>
+                  </div>
+                  <div class="form-grid two">
+                    <label class="field">
+                      <span class="field-label">日期<span class="req" aria-hidden="true">*</span></span>
+                      <input class="form-control" type="date" x-model="item.date" @input="dirty = true">
+                    </label>
+                    <label class="toggle-row">
+                      <span class="toggle-copy">
+                        <span class="toggle-label" x-text="item.visible ? '展示中' : '已隐藏'"></span>
+                      </span>
+                      <input class="toggle-input" type="checkbox" x-model="item.visible" @change="dirty = true">
+                      <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+                    </label>
+                  </div>
+                  <label class="field">
+                    <span class="field-label">改进内容<span class="req" aria-hidden="true">*</span></span>
+                    <textarea class="form-control" rows="2" maxlength="200" placeholder="例如：根据反馈，产品详情页新增了规格对比" x-model="item.content" @input="dirty = true"></textarea>
+                  </label>
+                </div>
+              </template>
+              <button class="btn btn-ghost btn-sm btn-block" type="button" @click="addImprovement()">{{icon:plus}} 添加听劝记录</button>
+            </div>
+          </div>
+
+          <div class="card editor-side-card">
+            <h3 class="side-title">列表摘要</h3>
+            <label class="field">
+              <span class="field-label">摘要</span>
+              <textarea class="form-control" rows="3" placeholder="一句话说明这篇内容讲什么" x-model="form.summary" @input="dirty = true"></textarea>
+              <span class="field-hint" x-text="isProduct ? '用于产品卡片，不填则自动截取正文前 200 字' : '用于栏目列表和首页卡片，不填则自动截取正文前 200 字'"></span>
+            </label>
+          </div>
+
+          <div class="card editor-side-card" x-show="isPage">
+            <h3 class="side-title">首页位置</h3>
+            <label class="field">
+              <span class="field-label">在首页展示为</span>
+              <select class="form-control" x-model="form.position" @change="dirty = true">
+                <option value="">不在首页展示</option>
+                <option value="features">产品与服务卡片</option>
+              </select>
+              <span class="field-hint">选择「产品与服务卡片」后，这个页面会出现在首页服务区。</span>
+            </label>
+            <a class="side-link" href="/admin/homepage">去首页装修预览 {{icon:external}}</a>
+          </div>
+
+          <div class="card editor-side-card">
+            <button class="advanced-toggle" type="button" :aria-expanded="showAdvanced ? 'true' : 'false'" @click="showAdvanced = !showAdvanced">
+              <span>更多设置</span>
+              <template x-if="showAdvanced">{{icon:chevron-down}}</template>
+              <template x-if="!showAdvanced">{{icon:chevron-right}}</template>
+            </button>
+            <template x-if="showAdvanced">
+              <div class="advanced-fields">
+                <div class="form-grid two" x-show="isArticle">
+                  <label class="field">
+                    <span class="field-label">作者</span>
+                    <input class="form-control" type="text" placeholder="可选" x-model="form.author" @input="dirty = true">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">发布日期</span>
+                    <input class="form-control" type="date" x-model="form.date" @input="dirty = true">
+                  </label>
+                </div>
+                <label class="field">
+                  <span class="field-label" x-text="isPage ? '排序' : '栏目内排序'"></span>
+                  <input class="form-control" type="number" x-model.number="form.weight" @input="dirty = true">
+                  <span class="field-hint">数字越小越靠前（栏目按升序排列时）</span>
+                </label>
+                <label class="field" x-show="isArticle">
+                  <span class="field-label">标签</span>
+                  <input class="form-control" type="text" placeholder="新闻, 动态" x-model="form.tags" @input="dirty = true">
+                  <span class="field-hint">用逗号分隔，例如：公司, 产品</span>
+                </label>
+                <label class="toggle-row" x-show="isArticle">
+                  <span class="toggle-copy">
+                    <span class="toggle-label">允许评论</span>
+                    <span class="field-hint">仅对使用评论功能的主题生效</span>
+                  </span>
+                  <input class="toggle-input" type="checkbox" x-model="form.comments" @change="dirty = true">
+                  <span class="toggle-track" aria-hidden="true"><span class="toggle-thumb"></span></span>
+                </label>
+                <p class="side-note" x-show="isArticle" x-text="'最近日期：' + (form.date || '未设置')"></p>
+              </div>
+            </template>
+          </div>
+
+          <button class="btn btn-danger-ghost btn-block editor-delete" type="button" x-show="isEdit" @click="removeContent()">{{icon:trash}} 删除这篇内容</button>
+        </div>
+      </div>
+
+      <div class="editor-mobile-bar">
+        <button class="btn btn-ghost" type="button" :disabled="!!saving" @click="save('draft')" x-text="saving === 'draft' ? '保存中…' : '保存草稿'"></button>
+        <button class="btn btn-primary" type="button" :disabled="!!saving" @click="save('publish')" x-text="form.draft ? '发布' : '更新'"></button>
+      </div>
+    </div>
+  </template>
+</div>

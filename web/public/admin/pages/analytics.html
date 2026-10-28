@@ -1,0 +1,170 @@
+<div class="analytics-page" x-data="analyticsPage">
+  <template x-if="loading">
+    <div class="loading-state"><div class="spinner"></div><p>正在汇总访问数据…</p></div>
+  </template>
+
+  <template x-if="!loading && error">
+    <div class="error-card">
+      {{icon:alert}}
+      <h3>统计数据加载失败</h3>
+      <p x-text="error"></p>
+      <button class="btn btn-primary" type="button" @click="load()">重试</button>
+    </div>
+  </template>
+
+  <template x-if="!loading && !error">
+    <div>
+      <div class="page-head">
+        <div class="page-head-text">
+          <h1>统计</h1>
+          <p x-text="headDesc"></p>
+        </div>
+        <div class="page-head-actions">
+          <button class="btn btn-ghost" type="button" :disabled="refreshing" @click="reload()">
+            {{icon:refresh}} <span x-text="refreshing ? '刷新中…' : '刷新数据'"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="analytics-toolbar">
+        <div class="segmented" role="group" aria-label="统计时间段">
+          <template x-for="item in ranges" :key="item.key">
+            <button class="segment" type="button" :class="{ active: range === item.key }"
+                    :aria-pressed="range === item.key ? 'true' : 'false'"
+                    @click="selectRange(item.key)" x-text="item.label"></button>
+          </template>
+        </div>
+        <span class="analytics-window" x-text="rangeLabel ? ('统计区间：' + rangeLabel + ' · ' + bucketLabel) : ''"></span>
+      </div>
+
+      <div class="stat-kpis">
+        <div class="stat-kpi">
+          <span class="stat-kpi-icon">{{icon:eye}}</span>
+          <div><span class="stat-kpi-label">总访问</span><strong x-text="num(totals.views)"></strong></div>
+        </div>
+        <div class="stat-kpi">
+          <span class="stat-kpi-icon">{{icon:user}}</span>
+          <div><span class="stat-kpi-label">访客数</span><strong x-text="num(totals.users)"></strong></div>
+        </div>
+        <div class="stat-kpi">
+          <span class="stat-kpi-icon">{{icon:list}}</span>
+          <div><span class="stat-kpi-label">被访问内容</span><strong x-text="num(totals.contents)"></strong></div>
+        </div>
+      </div>
+
+      <div class="stat-kinds">
+        <template x-for="kind in kinds" :key="kind.kind">
+          <div class="stat-kind">
+            <div class="stat-kind-head">
+              <span class="stat-kind-icon" :class="'kind-' + kind.kind" x-html="icon(kindIcons[kind.kind])"></span>
+              <div>
+                <strong x-text="kind.label"></strong>
+                <span x-text="kind.contents + ' 个内容被访问'"></span>
+              </div>
+            </div>
+            <div class="stat-kind-grid">
+              <div><strong x-text="num(kind.views)"></strong><span>访问数</span></div>
+              <div><strong x-text="num(kind.users)"></strong><span>访客数</span></div>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <div class="card analytics-card">
+        <div class="analytics-card-head">
+          <div>
+            <h2>访问趋势</h2>
+            <p x-text="'按' + (bucketLabel || '时间段') + '汇总，深色为访问数，浅色为访客数。'"></p>
+          </div>
+          <div class="chart-legend" aria-hidden="true">
+            <span><i class="legend-views"></i>访问数</span>
+            <span><i class="legend-users"></i>访客数</span>
+          </div>
+        </div>
+
+        <div class="chart-scroll" x-show="totals.views > 0">
+          <div class="chart-plot" role="img" :aria-label="chartAria">
+            <template x-for="point in series" :key="point.start">
+              <div class="chart-col">
+                <div class="chart-pair" :title="point.hint + ' · 访问 ' + point.views + ' · 访客 ' + point.users">
+                  <span class="chart-bar views" :style="'height:' + barHeight(point.views)"></span>
+                  <span class="chart-bar users" :style="'height:' + barHeight(point.users)"></span>
+                </div>
+                <span class="chart-label" x-text="point.label"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="empty-state compact" x-show="totals.views === 0">
+          <div class="empty-icon">{{icon:activity}}</div>
+          <h3>这个时间段还没有访问</h3>
+          <p>打开网站上的产品、文章或新闻详情页，再刷新这里就能看到数据。</p>
+        </div>
+      </div>
+
+      <div class="card analytics-card">
+        <div class="analytics-card-head">
+          <div>
+            <h2>内容明细</h2>
+            <p x-text="contents.length + ' 个内容，按访问数排序。'"></p>
+          </div>
+          <div class="analytics-filters">
+            <div class="segmented segmented-sm" role="group" aria-label="内容类型">
+              <template x-for="item in kindFilters" :key="item.key">
+                <button class="segment" type="button" :class="{ active: kindFilter === item.key }"
+                        :aria-pressed="kindFilter === item.key ? 'true' : 'false'"
+                        @click="kindFilter = item.key" x-text="item.label"></button>
+              </template>
+            </div>
+            <div class="search-box">
+              {{icon:search}}
+              <input type="search" placeholder="搜索标题或网址" aria-label="搜索内容" x-model="keyword">
+            </div>
+          </div>
+        </div>
+
+        <div class="empty-state compact" x-show="filteredContents.length === 0">
+          <div class="empty-icon">{{icon:list}}</div>
+          <h3 x-text="contents.length === 0 ? '暂无内容访问记录' : '没有匹配的内容'"></h3>
+          <p x-text="contents.length === 0 ? '所选时间段内还没有产品、文章或新闻被访问。' : '换个类型或关键词试试。'"></p>
+        </div>
+
+        <div class="table-wrap" x-show="filteredContents.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>内容</th>
+                <th class="col-type">类型</th>
+                <th class="col-num">访问数</th>
+                <th class="col-num">访客数</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="item in filteredContents" :key="item.path">
+                <tr>
+                  <td data-label="内容">
+                    <div class="content-title-cell">
+                      <a class="content-title" :href="item.path" target="_blank" rel="noopener" x-text="item.title"></a>
+                      <span class="analytics-path" x-text="item.path"></span>
+                    </div>
+                  </td>
+                  <td data-label="类型" class="col-type">
+                    <span class="badge" :class="kindBadge(item.kind)" x-text="kindLabel(item.kind)"></span>
+                  </td>
+                  <td data-label="访问数" class="col-num num-cell" x-text="num(item.views)"></td>
+                  <td data-label="访客数" class="col-num num-cell" x-text="num(item.users)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <p class="analytics-note">
+        {{icon:info}}
+        <span>访客按浏览器匿名标识去重，不记录 IP、设备或个人信息；访问明细保留 31 天。只统计已发布的产品、文章和新闻详情页。</span>
+      </p>
+    </div>
+  </template>
+</div>

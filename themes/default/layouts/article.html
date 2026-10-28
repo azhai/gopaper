@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>{{.Title}} - {{.SiteTitle}}</title>
+<title>{{if and .Title (ne .Title .SiteTitle)}}{{.Title}} - {{end}}{{.SiteTitle}}</title>
 <meta name="description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
 <meta property="og:title" content="{{.Title}}">
 <meta property="og:description" content="{{if .PageDesc}}{{.PageDesc}}{{else}}{{.SiteDesc}}{{end}}">
@@ -12,14 +12,17 @@
 <meta property="og:type" content="article">
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/style.css">
-<link rel="stylesheet" href="/static/github-light.css">
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+{{if .ThemeCSS}}<style>{{.ThemeCSS}}</style>{{end}}
+<script defer src="/static/js/microlight.js"></script>
+<script defer src="/static/js/highlight.js"></script>
+<script defer src="/static/js/shop.js"></script>
+<script defer src="/static/js/alpine.min.js"></script>
 </head>
-<body x-data="{mobileMenu: false}">
+<body x-data="{mobileMenu: false}"{{if eq .DirType "product"}} class="product-page"{{end}}>
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="{{.SiteTitle}}" class="logo-img"></a>
+    <a href="/" class="logo"><img src="/static/logo-mist.svg" alt="" class="logo-img"><span class="logo-text">{{.SiteTitle}}</span></a>
     <button class="mobile-toggle" @click="mobileMenu = !mobileMenu" aria-label="菜单">
       <span></span><span></span><span></span>
     </button>
@@ -31,7 +34,8 @@
   </div>
 </header>
 
-<main>
+<main{{if eq .DirType "product"}} class="product-main"{{end}}>
+{{if ne .DirType "product"}}
 <section class="page-banner">
   <div class="container">
     <h1>{{.Article.Title}}</h1>
@@ -44,7 +48,151 @@
     {{end}}
   </div>
 </section>
+{{end}}
 
+{{if eq .DirType "product"}}
+<section class="product-hero-section">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="面包屑">
+      <a href="/">首页</a>
+      <span aria-hidden="true">/</span>
+      <a href="/{{.Article.DirPath}}">产品中心</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{{.Product.CategoryLeaf}}</span>
+    </nav>
+    <div class="product-hero">
+      <div class="product-gallery" x-data="{ active: {{if .Product.Gallery}}'{{index .Product.Gallery 0}}'{{else}}''{{end}} }">
+        <div class="gallery-main">
+          {{if .Product.Gallery}}
+          <img :src="active" src="{{index .Product.Gallery 0}}" alt="{{.Product.Title}}">
+          {{else}}
+          <span class="product-cover-empty">暂无图片</span>
+          {{end}}
+        </div>
+        {{if gt (len .Product.Gallery) 1}}
+        <div class="gallery-thumbs" role="group" aria-label="产品图片">
+          {{range $i, $img := .Product.Gallery}}
+          <button type="button" class="gallery-thumb" @click="active = '{{$img}}'"
+            :class="{'is-active': active === '{{$img}}'}"
+            :aria-pressed="active === '{{$img}}'"
+            aria-label="查看第 {{$i}} 张图片">
+            <img src="{{$img}}" alt="" loading="lazy">
+          </button>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+
+      <div class="product-info" id="purchase" x-data="productBuy"
+        data-title="{{.Product.Title}}"
+        data-slug="{{.Article.Slug}}"
+        data-href="{{.Product.Href}}"
+        data-cover="{{.Product.Cover}}">
+        <span class="product-category">{{.Product.CategoryLeaf}}</span>
+        <h1 class="product-title">{{.Product.Title}}</h1>
+        {{if .Product.Summary}}<p class="product-summary">{{.Product.Summary}}</p>{{end}}
+        <div class="buy-head">
+          <span class="buy-label">参考价</span>
+          <strong class="buy-price" id="product-price" x-text="priceLabel">{{.Product.PriceLabel}}</strong>
+        </div>
+        {{if .Product.Specs}}
+        <fieldset class="spec-fieldset">
+          <legend>选择规格</legend>
+          <div class="spec-list">
+            {{range $i, $spec := .Product.Specs}}
+            <label class="spec-option">
+              <input type="radio" name="product-spec" value="{{$i}}" {{if eq $i 0}}checked{{end}} @change="active = {{$i}}">
+              <span class="spec-option-body">
+                <span class="spec-name">{{$spec.Name}}</span>
+                {{if $spec.Price}}<span class="spec-price">{{$spec.Price}}</span>{{end}}
+              </span>
+            </label>
+            {{end}}
+          </div>
+        </fieldset>
+        <div class="spec-panels">
+          {{range $i, $spec := .Product.Specs}}
+          <div class="spec-panel" data-index="{{$i}}"
+            data-name="{{$spec.Name}}"
+            data-price="{{$spec.Price}}"
+            data-sku="{{$spec.SKU}}"
+            data-jd="{{$spec.JDURL}}"
+            data-taobao="{{$spec.TaobaoURL}}"
+            x-show="active === {{$i}}"{{if ne $i 0}} x-cloak{{end}}>
+            <div class="buy-actions">
+              {{if $spec.JDURL}}<a class="buy-btn buy-jd" href="{{$spec.JDURL}}" target="_blank" rel="noopener noreferrer">到京东下单</a>{{end}}
+              {{if $spec.TaobaoURL}}<a class="buy-btn buy-tb" href="{{$spec.TaobaoURL}}" target="_blank" rel="noopener noreferrer">到淘宝下单</a>{{end}}
+              <button type="button" class="buy-btn buy-cart" @click="addToCart({{$i}})"
+                :class="{'is-added': added === {{$i}}}"
+                x-text="added === {{$i}} ? '已加入' : '加入购物车'">加入购物车</button>
+            </div>
+            {{if $spec.SKU}}<p class="spec-sku">SKU：{{$spec.SKU}}</p>{{end}}
+          </div>
+          {{end}}
+        </div>
+        <p class="buy-note">本站只维护产品信息，不收款、不发货。支付与配送在京东或淘宝完成。</p>
+        <p class="buy-status" id="buy-status" role="status" x-text="note"></p>
+        {{if .ContactEmail}}<p class="buy-contact">需要帮助？<a href="mailto:{{.ContactEmail}}">{{.ContactEmail}}</a></p>{{end}}
+        {{else}}
+        <p class="buy-note">该产品暂未设置规格和购买链接，欢迎联系我们了解详情。</p>
+        {{if .ContactEmail}}<p><a class="buy-btn" href="mailto:{{.ContactEmail}}">联系我们</a></p>{{end}}
+        {{end}}
+        <p class="product-meta">
+          {{if .Product.Specs}}{{len .Product.Specs}} 个规格{{end}}{{if .Product.Improvements}}{{if .Product.Specs}} · {{end}}已听劝 {{len .Product.Improvements}} 次{{end}}
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{{if gt (len .Product.Gallery) 2}}
+<section class="product-showcase" aria-label="产品细节图">
+  <div class="container">
+    <div class="showcase-grid">
+      {{range $i, $img := .Product.Gallery}}{{if $i}}
+      <figure class="showcase-item">
+        <img src="{{$img}}" alt="{{$.Product.Title}} 细节图 {{$i}}" loading="lazy">
+      </figure>
+      {{end}}{{end}}
+    </div>
+  </div>
+</section>
+{{end}}
+
+<section class="product-story-section">
+  <div class="container">
+    <div class="product-story">
+      <article class="article-content product-content">
+        {{.Content | safeHTML}}
+      </article>
+      {{if .Product.Improvements}}
+      <section class="product-improvements" aria-labelledby="improvements-title">
+        <div class="improvements-head">
+          <h2 id="improvements-title">听劝记录</h2>
+          <p>这些改进来自客户反馈，已采纳并上线；每条都标注了时间。</p>
+        </div>
+        <ol class="improvement-list">
+          {{range .Product.Improvements}}
+          <li class="improvement-item">
+            <time datetime="{{.Date}}">{{.Date}}</time>
+            <p>{{.Content}}</p>
+          </li>
+          {{end}}
+        </ol>
+      </section>
+      {{end}}
+    </div>
+  </div>
+</section>
+
+<div class="product-buy-bar">
+  <div class="buy-bar-info">
+    <span class="buy-bar-label">参考价</span>
+    <strong class="buy-bar-price">{{.Product.PriceLabel}}</strong>
+  </div>
+  <a class="buy-btn buy-cart" href="#purchase">查看规格与下单</a>
+</div>
+{{else}}
 <section class="article-section">
   <div class="container">
     <article class="article-content">
@@ -52,6 +200,7 @@
     </article>
   </div>
 </section>
+{{end}}
 </main>
 
 <footer class="site-footer">
@@ -81,6 +230,7 @@
   </div>
 </footer>
 
+{{template "shop" .}}
 </body>
 </html>
 {{end}}
